@@ -54,6 +54,23 @@ function Catalogo() {
     }
   }
 
+  async function actualizarPrecios() {
+    setGuardando(true);
+    setMensaje(null);
+    try {
+      const r = await api.post<{ actualizados: number; fallidos: string[] }>('/admin/precios/actualizacion');
+      setMensaje({
+        tipo: r.fallidos.length ? 'error' : 'exito',
+        texto: `Precios actualizados: ${r.actualizados}.${r.fallidos.length ? ` Fallaron: ${r.fallidos.join(', ')}.` : ''}`,
+      });
+      recargar();
+    } catch (err) {
+      setMensaje({ tipo: 'error', texto: (err as Error).message });
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   async function alternar(i: InstrumentoDto) {
     try {
       await api.patch(`/admin/instrumentos/${i.id}`, { activo: !i.activo });
@@ -65,7 +82,15 @@ function Catalogo() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <Tarjeta titulo="Catálogo de instrumentos" className="lg:col-span-2">
+      <Tarjeta
+        titulo="Catálogo de instrumentos"
+        className="lg:col-span-2"
+        acciones={
+          <Boton variante="secundario" onClick={actualizarPrecios} cargando={guardando}>
+            Actualizar precios ahora
+          </Boton>
+        }
+      >
         {cargando && !datos && <Cargando />}
         {error && <Alerta tipo="error">{error}</Alerta>}
         {datos && (
