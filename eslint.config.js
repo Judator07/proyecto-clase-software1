@@ -30,4 +30,9 @@ export default tseslint.config(
     files: ['scripts/**/*.{js,mjs,ts}', 'tests/**/*.ts', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Las pruebas inspeccionan respuestas JSON arbitrarias de la API.
+    files: ['tests/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
 );

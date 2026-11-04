@@ -41,3 +41,15 @@ export function formatearPct(valor: number | null, conSigno = false): string {
 export function formatearCantidad(cantidad: number): string {
   return cantidad.toLocaleString('es-CO', { maximumFractionDigits: 8 });
 }
+
+const formatoISO = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: ZONA,
+});
+
+/** Fecha calendario en Colombia en formato AAAA-MM-DD (para cierres y valoraciones diarias). */
+export function fechaISOColombia(fecha: Date): string {
+  return formatoISO.format(fecha);
+}

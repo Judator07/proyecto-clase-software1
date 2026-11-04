@@ -1,22 +1,19 @@
-import { Hono } from 'hono';
-import { rutasSalud } from './rutas/salud';
+/** Punto de entrada del Worker: API HTTP y tarea programada de RF-17. */
+import { crearApp } from './app';
+import { ProveedorYahoo } from './datos/proveedor';
+import { actualizarPrecios, tocaActualizar } from './servicios/mercado';
 
-import type { Entorno } from './entorno';
-
-const app = new Hono<Entorno>().basePath('/api');
-
-app.route('/salud', rutasSalud);
-
-app.notFound((c) => c.json({ error: 'Recurso no encontrado' }, 404));
-app.onError((err, c) => {
-  console.error('Error no controlado', err);
-  return c.json({ error: 'Error interno del servidor' }, 500);
-});
+const app = crearApp();
 
 export default {
   fetch: app.fetch,
   async scheduled(controller, env, ctx) {
-    // La actualización de precios (RF-17) se implementa en la fase 3.
-    console.log('cron', controller.cron, Boolean(env.DB), typeof ctx.waitUntil);
+    const ahora = new Date(controller.scheduledTime);
+    if (!tocaActualizar(ahora, Number(env.INTERVALO_ACTUALIZACION_MIN) || 15)) return;
+    ctx.waitUntil(
+      actualizarPrecios(env.DB, new ProveedorYahoo(), ahora).then((r) =>
+        console.log(`RF-17: ${r.actualizados} precios actualizados; fallidos: ${r.fallidos.join(', ') || 'ninguno'}`),
+      ),
+    );
   },
 } satisfies ExportedHandler<Env>;

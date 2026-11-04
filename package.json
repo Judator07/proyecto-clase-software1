@@ -19,7 +19,7 @@
     "formato": "prettier --write .",
     "formato:revisar": "prettier --check .",
     "test": "vitest run",
-    "test:cobertura": "vitest run --coverage",
+    "test:cobertura": "vitest run --project unit --coverage",
     "test:e2e": "playwright test",
     "cf-typegen": "wrangler types"
   },
@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.67.0",
+    "@cloudflare/vitest-plugin": "^1.5.1",
     "@eslint/js": "^10.0.0",
     "@tailwindcss/vite": "4.3.4",
     "@types/node": "^22.0.0",
