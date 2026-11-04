@@ -64,22 +64,48 @@ test('RNF-07: no es posible registrarse sin aceptar la política de datos', asyn
 test('RNF-03 y RNF-12: aviso educativo, sin desborde horizontal y sin fallas de accesibilidad WCAG 2.1 AA', async ({
   page,
 }) => {
-  const publicas = ['/', '/aprende', '/ingresar', '/registro', '/privacidad'];
+  const publicas = ['/', '/aprende', '/aprende/interes-compuesto', '/ingresar', '/registro', '/privacidad'];
   const privadas = ['/panel', '/instrumentos', '/instrumentos/SPY', '/ahorro', '/escenarios', '/perfil'];
   const violaciones: string[] = [];
   const revisar = async (ruta: string) => {
     await page.goto(ruta);
     await page.waitForLoadState('networkidle');
     await expect(page.getByText(AVISO)).toBeVisible();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-      `desborde en ${ruta}`,
-    ).toBe(true);
+    await expect(
+      page.getByRole('contentinfo').getByRole('link', { name: 'Política de tratamiento de datos' }),
+    ).toBeVisible();
+    const info = await page.evaluate(() => ({
+      ancho: document.documentElement.scrollWidth,
+      ventana: window.innerWidth,
+      elementos: [...document.querySelectorAll('body *')]
+        .filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1)
+        .slice(0, 4)
+        .map((e) => `${e.tagName}.${String(e.className).slice(0, 60)}`),
+    }));
+    expect(info.ancho <= info.ventana, `desborde en ${ruta}: ${JSON.stringify(info)}`).toBe(true);
     const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     for (const v of r.violations) violaciones.push(`${ruta}: ${v.id} (${v.nodes.length})`);
   };
   for (const ruta of publicas) await revisar(ruta);
   await registrar(page);
+  // IU-08: crea un portafolio con una posición para revisar su detalle.
+  const id = await page.evaluate(async () => {
+    const json = { 'Content-Type': 'application/json' };
+    const pf = await (
+      await fetch('/api/portafolios', {
+        method: 'POST',
+        headers: json,
+        body: JSON.stringify({ nombre: 'Accesibilidad' }),
+      })
+    ).json();
+    await fetch('/api/ordenes', {
+      method: 'POST',
+      headers: json,
+      body: JSON.stringify({ portafolioId: pf.id, simbolo: 'SPY', tipo: 'COMPRA', cantidad: 1 }),
+    });
+    return pf.id as number;
+  });
+  privadas.push(`/portafolios/${id}`);
   for (const ruta of privadas) await revisar(ruta);
   expect(violaciones, violaciones.join('\n')).toEqual([]);
 });

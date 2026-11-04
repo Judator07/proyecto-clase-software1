@@ -1,6 +1,6 @@
 # 4. Diseño del sistema
 
-El diseño refina el modelo de anális (sección 3) para una plataforma concreta: **Cloudflare Workers** (cómputo en el borde de la red) y **Cloudflare D1** (base de datos relacional SQLite). Las fuentes de los diagramas están en [`docs/uml/diseno/`](../uml/diseno/).
+El diseño refina el modelo de análisis (sección 3) para una plataforma concreta: **Cloudflare Workers** (cómputo en el borde de la red) y **Cloudflare D1** (base de datos relacional SQLite). Las fuentes de los diagramas están en [`docs/uml/diseno/`](../uml/diseno/).
 
 ## 4.1 Arquitectura general y despliegue
 
@@ -25,7 +25,7 @@ URL de producción: <https://simulador-inversion.juandanieltorresr.workers.dev>.
 | Capa                    | Ubicación                                        | Responsabilidad                                                                                                     |
 | ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | Presentación (cliente)  | `src/client`                                     | Pantallas IU-01 a IU-11, componentes, gráficos (Recharts) y cliente HTTP.                                           |
-| Presentación (servidor) | `src/server/rutas`, `sesion.ts`, `validacion.ts` | Contrato REST, validación de entradas (Zod), autenticación y autorización.                                          |
+| Presentación (servidor) | `src/server/rutas`, `src/server/sesion.ts`, `src/server/validacion.ts` | Contrato REST, validación de entradas (Zod), autenticación y autorización.                                          |
 | Lógica de negocio       | `src/server/servicios`, `src/dominio`            | Orquestación de operaciones y reglas de negocio. El dominio son funciones puras compartidas por cliente y servidor. |
 | Datos                   | `src/server/datos`, `migrations/`                | Repositorios SQL sobre D1 y el adaptador del proveedor de mercado.                                                  |
 
@@ -48,7 +48,7 @@ El servidor vuelve a validar todo lo que modifica datos. Así una sola implement
 | Portafolio                            | `portafolio`            | Borrado lógico, para que el historial sobreviva a la eliminación (agregación del análisis). |
 | Posición                              | `posicion`              | PK compuesta (portafolio, instrumento).                                                     |
 | DepósitoAhorro                        | `deposito_ahorro`       | Clase agregada en el SRS v1.1.                                                              |
-| Transacción                           | `transaccion`           | El estado Pendiente no se persiste (ver §4.6, D4).                                          |
+| Transacción                           | `transaccion`           | El estado Pendiente no se persiste (ver §4.7, D4).                                          |
 | InstrumentoFinanciero y subclases     | `instrumento`           | Herencia en una sola tabla con `tipo` y columnas opcionales (sector, bolsa, índice).        |
 | CotizaciónHistórica                   | `cotizacion_historica`  | Un cierre diario por instrumento.                                                           |
 | —                                     | `valoracion_portafolio` | Valor diario de cada portafolio (RF-17), para el gráfico de RF-15.                          |

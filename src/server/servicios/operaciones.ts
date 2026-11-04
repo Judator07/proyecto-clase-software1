@@ -10,11 +10,14 @@ import { aCantidadE8, desdeCantidadE8, formatearUSD, montoCentavos } from '../..
 import { formatearCantidad, formatearPrecio } from '../../dominio/formato';
 import { gananciaRealizadaCentavos } from '../../dominio/portafolio';
 import { validarCantidad } from '../../dominio/reglas';
-import { aInstrumentoDto, buscarInstrumentoPorSimbolo, type FilaInstrumento } from '../datos/mercado';
+import { aInstrumentoDto, stmtInstrumentoPorSimbolo, type FilaInstrumento } from '../datos/mercado';
 import {
   buscarDepositoActivo,
   buscarPortafolio,
-  buscarPosicion,
+  stmtBuscarPortafolio,
+  stmtPosicionPorSimbolo,
+  stmtSaldo,
+  type FilaPortafolio,
   stmtCerrarDeposito,
   stmtExigirPortafolioActivo,
   stmtLimpiarPosicionesVacias,
@@ -22,9 +25,10 @@ import {
   stmtSumarPosicion,
 } from '../datos/portafolios';
 import {
-  buscarTransaccion,
-  stmtInsertarTransaccion,
   aTransaccionDto,
+  stmtBuscarTransaccion,
+  stmtInsertarTransaccion,
+  type FilaTransaccion,
   type NuevaTransaccion,
 } from '../datos/transacciones';
 import { ErrorAplicacion, esViolacionRestriccion, noEncontrado } from '../errores';
@@ -46,9 +50,16 @@ function stmtAjustarSaldo(db: D1Database, usuarioId: number, deltaCentavos: numb
 }
 
 async function prepararOrden(db: D1Database, usuarioId: number, d: DatosOrden) {
-  const portafolio = await buscarPortafolio(db, d.portafolioId, usuarioId);
+  // Una sola ida a D1 para todas las lecturas de la orden.
+  const [pf, ins, pos, sal] = await db.batch<unknown>([
+    stmtBuscarPortafolio(db, d.portafolioId, usuarioId),
+    stmtInstrumentoPorSimbolo(db, d.simbolo),
+    stmtPosicionPorSimbolo(db, d.portafolioId, d.simbolo),
+    stmtSaldo(db, usuarioId),
+  ]);
+  const portafolio = pf.results[0] as FilaPortafolio | undefined;
   if (!portafolio) throw noEncontrado('Portafolio');
-  const instrumento = await buscarInstrumentoPorSimbolo(db, d.simbolo);
+  const instrumento = ins.results[0] as FilaInstrumento | undefined;
   if (!instrumento) throw noEncontrado('Instrumento');
   if (instrumento.tipo === 'AHORRO') {
     throw new ErrorAplicacion(400, 'Las cuentas de ahorro se operan desde el simulador de ahorro.');
@@ -62,10 +73,8 @@ async function prepararOrden(db: D1Database, usuarioId: number, d: DatosOrden) {
   if (precio !== null && monto < 1) {
     throw new ErrorAplicacion(400, 'El monto mínimo de una operación es USD 0,01.', { campo: 'cantidad' });
   }
-  const [posicion, saldo] = await Promise.all([
-    buscarPosicion(db, portafolio.id, instrumento.id),
-    saldoDe(db, usuarioId),
-  ]);
+  const posicion = (pos.results[0] as { cantidad_e8: number; costo_promedio: number } | undefined) ?? null;
+  const saldo = (sal.results[0] as { saldo_centavos: number } | undefined)?.saldo_centavos ?? 0;
   return { portafolio, instrumento, cantidadE8, precio, monto, posicion, saldo };
 }
 
@@ -105,8 +114,12 @@ async function resultado(
   transaccionId: number,
   mensaje: string,
 ): Promise<ResultadoOrdenDto> {
-  const [fila, saldo] = await Promise.all([buscarTransaccion(db, transaccionId), saldoDe(db, usuarioId)]);
-  return { transaccion: aTransaccionDto(fila!), saldoCentavos: saldo, mensaje };
+  const [t, s] = await db.batch<unknown>([stmtBuscarTransaccion(db, transaccionId), stmtSaldo(db, usuarioId)]);
+  return {
+    transaccion: aTransaccionDto(t.results[0] as FilaTransaccion),
+    saldoCentavos: (s.results[0] as { saldo_centavos: number }).saldo_centavos,
+    mensaje,
+  };
 }
 
 /** RF-08 / RF-09: ejecuta la orden confirmada al último precio registrado (RN-03). */

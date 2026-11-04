@@ -123,7 +123,7 @@ export default function Ahorro() {
                   etiqueta="Saldo"
                 />
                 <div
-                  className="mt-4 max-h-72 overflow-y-auto"
+                  className="relative mt-4 max-h-72 overflow-y-auto"
                   tabIndex={0}
                   role="region"
                   aria-label="Tabla de evolución por periodo"

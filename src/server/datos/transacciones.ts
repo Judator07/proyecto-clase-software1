@@ -138,3 +138,16 @@ export async function gananciaRealizadaPortafolio(db: D1Database, portafolioId: 
     .first<{ total: number }>();
   return fila?.total ?? 0;
 }
+
+export function stmtBuscarTransaccion(db: D1Database, id: number) {
+  return db.prepare(`${SELECT_TRANSACCION} WHERE t.id = ?`).bind(id);
+}
+
+export function stmtGananciaRealizada(db: D1Database, portafolioId: number) {
+  return db
+    .prepare(
+      `SELECT COALESCE(SUM(ganancia_realizada_centavos), 0) AS total FROM transaccion
+        WHERE portafolio_id = ? AND estado = 'EJECUTADA'`,
+    )
+    .bind(portafolioId);
+}

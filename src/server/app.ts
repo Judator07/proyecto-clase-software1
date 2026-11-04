@@ -43,6 +43,16 @@ export function crearApp(proveedor: ProveedorDatosMercado = new ProveedorYahoo()
   app.onError((err, c) => {
     if (err instanceof ErrorAplicacion) return c.json({ error: err.message, detalles: err.detalles }, err.estado);
     if (err instanceof HTTPException) return c.json({ error: err.message || 'Solicitud no válida.' }, err.status);
+    // D1 atiende una consulta a la vez: ante saturación se responde 503 para que el cliente reintente.
+    if (
+      /overloaded|too many requests queued|queued for too long|network connection lost|object to be reset/i.test(
+        String(err),
+      )
+    ) {
+      console.error('D1 saturada o reiniciada', String(err));
+      c.header('Retry-After', '2');
+      return c.json({ error: 'El servicio está ocupado en este momento. Intenta de nuevo en unos segundos.' }, 503);
+    }
     console.error('Error no controlado', err);
     return c.json({ error: 'Ocurrió un error interno. Intenta de nuevo.' }, 500);
   });

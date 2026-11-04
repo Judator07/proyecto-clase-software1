@@ -120,3 +120,16 @@ export function stmtGuardarCierre(db: D1Database, id: number, fecha: string, pre
     )
     .bind(id, fecha, precio);
 }
+
+export function stmtInstrumentoPorSimbolo(db: D1Database, simbolo: string) {
+  return db.prepare('SELECT * FROM instrumento WHERE simbolo = ?').bind(simbolo);
+}
+
+export function stmtHistoricoPorSimbolo(db: D1Database, simbolo: string, desde: string) {
+  return db
+    .prepare(
+      `SELECT fecha, precio_cierre AS valor FROM cotizacion_historica
+        WHERE instrumento_id = (SELECT id FROM instrumento WHERE simbolo = ?) AND fecha >= ? ORDER BY fecha`,
+    )
+    .bind(simbolo, desde);
+}

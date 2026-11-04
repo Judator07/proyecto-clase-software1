@@ -1,5 +1,11 @@
 /** Gestión de portafolios: creación, detalle, rendimiento, renombrado, eliminación y valoración (RF-12 a RF-15). */
-import type { DetallePortafolioDto, Rango, ResumenPortafolioDto, ValoracionDto } from '../../compartido/tipos';
+import type {
+  DetallePortafolioDto,
+  PuntoSerie,
+  Rango,
+  ResumenPortafolioDto,
+  ValoracionDto,
+} from '../../compartido/tipos';
 import { RANGOS } from '../../compartido/tipos';
 import { aCantidadE8, formatearUSD } from '../../dominio/dinero';
 import { calcularEstadisticas } from '../../dominio/estadisticas';
@@ -8,17 +14,23 @@ import { gananciaRealizadaCentavos } from '../../dominio/portafolio';
 import { validarNombrePortafolio } from '../../dominio/reglas';
 import {
   buscarPortafolio,
-  listarPortafolios,
+  stmtBuscarPortafolio,
   stmtCerrarDeposito,
+  stmtDepositosDeUsuario,
   stmtLimpiarPosicionesVacias,
+  stmtPortafoliosDeUsuario,
+  stmtPosicionesDeUsuario,
+  stmtSaldo,
   stmtsRestarPosicion,
-  valoracionesDesde,
+  stmtValoracionesDesde,
+  type FilaDeposito,
   type FilaPortafolio,
+  type FilaPosicion,
 } from '../datos/portafolios';
-import { gananciaRealizadaPortafolio, stmtInsertarTransaccion } from '../datos/transacciones';
+import { stmtGananciaRealizada, stmtInsertarTransaccion } from '../datos/transacciones';
 import { ErrorAplicacion, esViolacionRestriccion, noEncontrado } from '../errores';
 import { saldoDe } from './cuentas';
-import { resumenVacio, valorarPortafoliosDeUsuario, type ValoracionPortafolio } from './valoracion';
+import { resumenVacio, valorarFilas, valorarPortafoliosDeUsuario, type ValoracionPortafolio } from './valoracion';
 
 function aResumen(p: FilaPortafolio, v: ValoracionPortafolio): ResumenPortafolioDto {
   return {
@@ -34,11 +46,13 @@ function aResumen(p: FilaPortafolio, v: ValoracionPortafolio): ResumenPortafolio
 
 /** Panel principal (IU-03): portafolios con su valor actual. */
 export async function listarResumenes(db: D1Database, usuarioId: number): Promise<ResumenPortafolioDto[]> {
-  const [portafolios, valoraciones] = await Promise.all([
-    listarPortafolios(db, usuarioId),
-    valorarPortafoliosDeUsuario(db, usuarioId),
+  const [pf, pos, dep] = await db.batch<unknown>([
+    stmtPortafoliosDeUsuario(db, usuarioId),
+    stmtPosicionesDeUsuario(db, usuarioId),
+    stmtDepositosDeUsuario(db, usuarioId),
   ]);
-  return portafolios.map((p) => aResumen(p, valoraciones.get(p.id) ?? resumenVacio()));
+  const valoraciones = valorarFilas(pos.results as FilaPosicion[], dep.results as FilaDeposito[], new Date());
+  return (pf.results as FilaPortafolio[]).map((p) => aResumen(p, valoraciones.get(p.id) ?? resumenVacio()));
 }
 
 function traducirErrorNombre(e: unknown): never {
@@ -80,13 +94,19 @@ async function exigirPortafolio(db: D1Database, id: number, usuarioId: number) {
 
 /** RF-14: posiciones, balance, rendimiento y ganancia realizada acumulada del portafolio. */
 export async function detallePortafolio(db: D1Database, usuarioId: number, id: number): Promise<DetallePortafolioDto> {
-  const portafolio = await exigirPortafolio(db, id, usuarioId);
-  const [valoraciones, gananciaRealizada, saldo] = await Promise.all([
-    valorarPortafoliosDeUsuario(db, usuarioId),
-    gananciaRealizadaPortafolio(db, id),
-    saldoDe(db, usuarioId),
+  const [pf, pos, dep, gan, sal] = await db.batch<unknown>([
+    stmtBuscarPortafolio(db, id, usuarioId),
+    stmtPosicionesDeUsuario(db, usuarioId),
+    stmtDepositosDeUsuario(db, usuarioId),
+    stmtGananciaRealizada(db, id),
+    stmtSaldo(db, usuarioId),
   ]);
-  const v = valoraciones.get(id) ?? resumenVacio();
+  const portafolio = pf.results[0] as FilaPortafolio | undefined;
+  if (!portafolio) throw noEncontrado('Portafolio');
+  const v =
+    valorarFilas(pos.results as FilaPosicion[], dep.results as FilaDeposito[], new Date()).get(id) ?? resumenVacio();
+  const gananciaRealizada = (gan.results[0] as { total: number }).total;
+  const saldo = (sal.results[0] as { saldo_centavos: number }).saldo_centavos;
   return {
     ...aResumen(portafolio, v),
     posiciones: v.posiciones,
@@ -217,13 +237,17 @@ export async function valoracionPortafolio(
   id: number,
   rango: Rango,
 ): Promise<ValoracionDto> {
-  await exigirPortafolio(db, id, usuarioId);
   const ahora = new Date();
-  const [historico, valoraciones] = await Promise.all([
-    valoracionesDesde(db, id, fechaDesde(rango, ahora)),
-    valorarPortafoliosDeUsuario(db, usuarioId, ahora),
+  const [pf, hist, pos, dep] = await db.batch<unknown>([
+    stmtBuscarPortafolio(db, id, usuarioId),
+    stmtValoracionesDesde(db, id, fechaDesde(rango, ahora)),
+    stmtPosicionesDeUsuario(db, usuarioId),
+    stmtDepositosDeUsuario(db, usuarioId),
   ]);
-  const actual = valoraciones.get(id) ?? resumenVacio();
+  if (!pf.results[0]) throw noEncontrado('Portafolio');
+  const historico = hist.results as PuntoSerie[];
+  const actual =
+    valorarFilas(pos.results as FilaPosicion[], dep.results as FilaDeposito[], ahora).get(id) ?? resumenVacio();
   const hoy = fechaISOColombia(ahora);
   // El punto de hoy siempre refleja el valor en vivo.
   const puntos = historico.filter((p) => p.fecha !== hoy);

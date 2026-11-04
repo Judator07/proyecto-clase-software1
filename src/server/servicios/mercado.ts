@@ -1,5 +1,5 @@
 /** Catálogo, precios, históricos, actualización automática (RF-06, RF-07, RF-16, RF-17) y administración (RF-18). */
-import type { HistoricoDto, InstrumentoDto, Rango } from '../../compartido/tipos';
+import type { HistoricoDto, InstrumentoDto, PuntoSerie, Rango } from '../../compartido/tipos';
 import { calcularEstadisticas } from '../../dominio/estadisticas';
 import { fechaISOColombia, formatearFecha } from '../../dominio/formato';
 import type { TipoInstrumento } from '../../dominio/reglas';
@@ -7,10 +7,11 @@ import {
   aInstrumentoDto,
   buscarInstrumentoPorId,
   buscarInstrumentoPorSimbolo,
-  historicoDesde,
   listarInstrumentos,
   stmtActualizarPrecio,
   stmtGuardarCierre,
+  stmtHistoricoPorSimbolo,
+  stmtInstrumentoPorSimbolo,
   stmtMarcarDesactualizado,
   type FilaInstrumento,
 } from '../datos/mercado';
@@ -47,11 +48,15 @@ export async function detalleInstrumento(db: D1Database, simbolo: string): Promi
 
 /** RF-07 / RF-16: serie de cierres del rango, aviso si el rango está incompleto y estadísticas. */
 export async function historicoInstrumento(db: D1Database, simbolo: string, rango: Rango): Promise<HistoricoDto> {
-  const instrumento = await buscarInstrumentoPorSimbolo(db, simbolo);
+  const desde = fechaDesde(rango, new Date());
+  const [ins, hist] = await db.batch<unknown>([
+    stmtInstrumentoPorSimbolo(db, simbolo),
+    stmtHistoricoPorSimbolo(db, simbolo, desde),
+  ]);
+  const instrumento = ins.results[0] as FilaInstrumento | undefined;
   if (!instrumento) throw noEncontrado('Instrumento');
   if (instrumento.tipo === 'AHORRO') throw new ErrorAplicacion(400, 'La cuenta de ahorro no tiene precios de mercado.');
-  const desde = fechaDesde(rango, new Date());
-  const puntos = await historicoDesde(db, instrumento.id, desde);
+  const puntos = hist.results as PuntoSerie[];
   let aviso: string | null = null;
   if (puntos.length === 0) aviso = 'No hay datos de precios para este rango.';
   else if (Date.parse(puntos[0].fecha) - Date.parse(desde) > 5 * 86_400_000) {
