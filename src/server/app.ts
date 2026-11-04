@@ -43,6 +43,17 @@ export function crearApp(proveedor: ProveedorDatosMercado = new ProveedorYahoo()
   app.onError((err, c) => {
     if (err instanceof ErrorAplicacion) return c.json({ error: err.message, detalles: err.detalles }, err.estado);
     if (err instanceof HTTPException) return c.json({ error: err.message || 'Solicitud no válida.' }, err.status);
+    // Plan gratuito de D1: 100.000 filas escritas por día (se reinicia a medianoche UTC).
+    if (/exceeded D1's free tier|row write limit/i.test(String(err))) {
+      console.error('Cuota diaria de escrituras de D1 agotada', String(err));
+      return c.json(
+        {
+          error:
+            'La plataforma alcanzó su límite diario de operaciones. Puedes consultar tus datos; las operaciones se reanudan a las 7:00 p. m. (hora de Colombia).',
+        },
+        503,
+      );
+    }
     // D1 atiende una consulta a la vez: ante saturación se responde 503 para que el cliente reintente.
     if (
       /overloaded|too many requests queued|queued for too long|network connection lost|object to be reset/i.test(

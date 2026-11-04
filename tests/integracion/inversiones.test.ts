@@ -1,7 +1,7 @@
 /** Pruebas de integración: catálogo, órdenes, ahorro, portafolios, historial, precios y administración. */
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { actualizarPrecios } from '../../src/server/servicios/mercado';
+import { actualizarPrecios, esCicloDeValoracion, primerCicloDelDia } from '../../src/server/servicios/mercado';
 import {
   Cliente,
   fijarPrecio,
@@ -270,7 +270,8 @@ describe('RF-15 / RF-17 actualización de precios y valoración diaria', () => {
     const { c, portafolioId } = await registrarConPortafolio();
     await comprar(c, portafolioId, 'AAPL', 10);
     proveedor.fallidos.add('MSFT');
-    const r = await actualizarPrecios(env.DB, proveedor, new Date());
+    // Ciclo de las 21:00 UTC: además de los precios, guarda la valoración diaria (RF-17).
+    const r = await actualizarPrecios(env.DB, proveedor, new Date('2026-11-04T21:05:00Z'));
     proveedor.fallidos.delete('MSFT');
     expect(r.fallidos).toEqual(['MSFT']);
     const aapl = (await c.get('/instrumentos/AAPL')).datos;
@@ -379,5 +380,18 @@ describe('regresiones de la revisión crítica (órdenes y precios)', () => {
     await env.DB.prepare("UPDATE transaccion SET creado_en = '2026-11-05T01:00:00.000Z'").run();
     expect((await c.get('/transacciones?desde=2026-11-04&hasta=2026-11-04')).datos).toHaveLength(1);
     expect((await c.get('/transacciones?desde=2026-11-05&hasta=2026-11-05')).datos).toHaveLength(0);
+  });
+});
+
+describe('RF-17: escrituras del cron acotadas para el plan gratuito de D1', () => {
+  it('la valoración diaria solo se guarda en el ciclo de las 21:00 UTC y el relleno de huecos a las 00:00 UTC', async () => {
+    expect(esCicloDeValoracion(new Date('2026-11-04T21:00:00Z'))).toBe(true);
+    expect(esCicloDeValoracion(new Date('2026-11-04T21:15:00Z'))).toBe(false);
+    expect(primerCicloDelDia(new Date('2026-11-05T00:00:00Z'))).toBe(true);
+    expect(primerCicloDelDia(new Date('2026-11-05T00:15:00Z'))).toBe(false);
+    const antes = await env.DB.prepare('SELECT count(*) AS n FROM valoracion_portafolio').first<{ n: number }>();
+    await actualizarPrecios(env.DB, proveedor, new Date('2026-11-04T15:00:00Z'));
+    const despues = await env.DB.prepare('SELECT count(*) AS n FROM valoracion_portafolio').first<{ n: number }>();
+    expect(despues!.n).toBe(antes!.n);
   });
 });

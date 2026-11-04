@@ -3,7 +3,7 @@
 [![CI](https://github.com/Judator07/proyecto-clase-software1/actions/workflows/ci.yml/badge.svg)](https://github.com/Judator07/proyecto-clase-software1/actions/workflows/ci.yml)
 ![Licencia MIT](https://img.shields.io/badge/licencia-MIT-green)
 ![Cloudflare Workers + D1](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-F38020)
-![Pruebas](https://img.shields.io/badge/pruebas-88%20en%20verde-brightgreen)
+![Pruebas](https://img.shields.io/badge/pruebas-89%20en%20verde-brightgreen)
 ![Cobertura del dominio](https://img.shields.io/badge/cobertura%20dominio-100%25-brightgreen)
 
 Aplicación web **educativa** para simular inversiones en **acciones, ETF, criptomonedas y cuentas de ahorro** con dinero ficticio y precios reales del mercado.
@@ -52,7 +52,7 @@ El detalle está en la sección de [diseño del informe](docs/informe/04-diseno.
 | Tipo de prueba                                                      | Cantidad | Herramienta                 |
 | ------------------------------------------------------------------- | -------- | --------------------------- |
 | Unitarias (dominio, con los criterios de aceptación del SRS)        | 36       | Vitest                      |
-| Integración (API + D1 en el runtime de Workers)                     | 42       | `@cloudflare/vitest-plugin` |
+| Integración (API + D1 en el runtime de Workers)                     | 43       | `@cloudflare/vitest-plugin` |
 | Extremo a extremo y accesibilidad WCAG 2.1 AA (escritorio y 360 px) | 10       | Playwright + axe            |
 | Carga (50 usuarios concurrentes, 10 min, en producción)             | 1        | `tests/carga/carga.mjs`     |
 

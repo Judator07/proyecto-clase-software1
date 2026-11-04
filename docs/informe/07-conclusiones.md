@@ -2,14 +2,14 @@
 
 ## 7.1 Síntesis de resultados
 
-| Aspecto                       | Resultado                                                                                                                                                                                                                        |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Requerimientos funcionales    | **22 de 22 implementados** (RF-01 a RF-22), cada uno con al menos una prueba automatizada de sus criterios de aceptación.                                                                                                        |
-| Reglas de negocio             | **9 de 9** implementadas; las críticas (RN-04, RN-05) se imponen también en la base de datos.                                                                                                                                    |
-| Interfaces de usuario         | **11 de 11** pantallas del SRS, más el inicio, la política de datos y el detalle de artículo.                                                                                                                                    |
-| Requerimientos no funcionales | **10 de 12 verificados** con evidencia automatizada. RNF-08 está verificado de forma automatizada pero falta la prueba con personas; RNF-09 requiere 2 semanas de monitoreo; RNF-12 está verificado solo en Chromium (ver §5.6). |
-| Pruebas                       | 36 unitarias, 42 de integración y 10 E2E, todas en verde. Cobertura del dominio: 100 % de líneas.                                                                                                                                |
-| Despliegue                    | En producción, con integración y entrega continuas: <https://simulador-inversion.juandanieltorresr.workers.dev>.                                                                                                                 |
+| Aspecto                       | Resultado                                                                                                                                                                                                                                                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Requerimientos funcionales    | **22 de 22 implementados** (RF-01 a RF-22), cada uno con al menos una prueba automatizada de sus criterios de aceptación.                                                                                                                                                                                         |
+| Reglas de negocio             | **9 de 9** implementadas; las críticas (RN-04, RN-05) se imponen también en la base de datos.                                                                                                                                                                                                                     |
+| Interfaces de usuario         | **11 de 11** pantallas del SRS, más el inicio, la política de datos y el detalle de artículo.                                                                                                                                                                                                                     |
+| Requerimientos no funcionales | **8 de 12 verificados** (RNF-01, 03, 04, 05, 06, 07, 10 y 11). **3 parciales**: RNF-02 (integridad verificada bajo carga; falta repetir la medición de errores), RNF-08 (automatizado; falta la prueba con personas) y RNF-12 (solo Chromium). **1 pendiente**: RNF-09 (2 semanas de monitoreo). Ver §5.4 y §5.6. |
+| Pruebas                       | 36 unitarias, 43 de integración y 10 E2E, todas en verde. Cobertura del dominio: 100 % de líneas.                                                                                                                                                                                                                 |
+| Despliegue                    | En producción, con integración y entrega continuas: <https://simulador-inversion.juandanieltorresr.workers.dev>.                                                                                                                                                                                                  |
 
 ## 7.2 Análisis
 
@@ -24,7 +24,8 @@
    Ninguno de estos defectos se habría visto sin pruebas ni revisiones.
 
 4. **La integridad de los datos debe residir en la base de datos.** Las restricciones CHECK y la ejecución atómica por lotes garantizan que el saldo nunca sea negativo, aun con solicitudes simultáneas (RNF-10). Las validaciones de la aplicación mejoran la experiencia, pero la base de datos es la que da la garantía.
-5. **La IA aceleró la construcción, pero no reemplazó el criterio del equipo.** El asistente produjo código, pruebas y documentación en una fracción del tiempo habitual. Aun así, el resultado depende de un SRS bien hecho y de las decisiones del equipo (plataforma, proveedor, alcance). Las verificaciones con personas reales siguen siendo responsabilidad humana.
+5. **Las cuotas de la plataforma también son requerimientos no funcionales.** La prueba de carga confirmó el rendimiento (p95 de 738 ms) y la integridad (0 saldos inconsistentes). También agotó la cuota diaria de escrituras del plan gratuito de D1, algo que el SRS no contemplaba. Una prueba de carga debe presupuestar los límites del proveedor, y el diseño debe degradarse con elegancia cuando se alcanzan (§5.4).
+6. **La IA aceleró la construcción, pero no reemplazó el criterio del equipo.** El asistente produjo código, pruebas y documentación en una fracción del tiempo habitual. Aun así, el resultado depende de un SRS bien hecho y de las decisiones del equipo (plataforma, proveedor, alcance). Las verificaciones con personas reales siguen siendo responsabilidad humana.
 
 ## 7.3 Riesgos y limitaciones
 

@@ -72,6 +72,16 @@ export function tocaActualizar(ahora: Date, intervaloMinutos: number): boolean {
   return Math.floor(minutoDelDia / 15) % ciclos === 0;
 }
 
+/** Primer ciclo del cron en el día UTC (00:00–00:14). */
+export function primerCicloDelDia(ahora: Date): boolean {
+  return ahora.getUTCHours() === 0 && ahora.getUTCMinutes() < 15;
+}
+
+/** Ciclo de las 21:00 UTC (16:00 en Nueva York y Bogotá), después del cierre de la bolsa. */
+export function esCicloDeValoracion(ahora: Date): boolean {
+  return ahora.getUTCHours() === 21 && ahora.getUTCMinutes() < 15;
+}
+
 async function ejecutarEnLotes(db: D1Database, sentencias: D1PreparedStatement[]): Promise<void> {
   for (let i = 0; i < sentencias.length; i += SENTENCIAS_POR_BATCH) {
     await db.batch(sentencias.slice(i, i + SENTENCIAS_POR_BATCH));
@@ -101,7 +111,9 @@ export async function actualizarPrecios(
     if (r.status === 'fulfilled') {
       const c = r.value;
       sentencias.push(stmtActualizarPrecio(db, instrumento.id, c.precio, c.cierreAnterior, c.fechaHora));
-      for (const cierre of c.cierres.slice(-CIERRES_POR_CICLO)) {
+      // Cada ciclo guarda solo el cierre del día; el primer ciclo del día (UTC) rellena huecos recientes.
+      const cierres = primerCicloDelDia(ahora) ? c.cierres.slice(-CIERRES_POR_CICLO) : c.cierres.slice(-1);
+      for (const cierre of cierres) {
         sentencias.push(stmtGuardarCierre(db, instrumento.id, cierre.fecha, cierre.precio));
       }
     } else {
@@ -112,9 +124,10 @@ export async function actualizarPrecios(
     }
   });
   // Purga de sesiones expiradas (RNF-06).
-  sentencias.push(db.prepare('DELETE FROM sesion WHERE expira_en < ?').bind(ahora.toISOString()));
+  sentencias.push(db.prepare('DELETE FROM sesion WHERE expira_en < ?').bind(new Date().toISOString()));
   await ejecutarEnLotes(db, sentencias);
-  await guardarValoracionesDiarias(db, ahora);
+  // RF-17: el valor de cada portafolio se almacena una vez al día, tras el cierre del mercado de EE. UU.
+  if (esCicloDeValoracion(ahora)) await guardarValoracionesDiarias(db, ahora);
   return { actualizados: instrumentos.length - fallidos.length, fallidos };
 }
 

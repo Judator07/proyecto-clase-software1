@@ -22,12 +22,12 @@ URL de producción: <https://simulador-inversion.juandanieltorresr.workers.dev>.
 
 ![Arquitectura en capas](../uml/diseno/componentes.svg)
 
-| Capa                    | Ubicación                                        | Responsabilidad                                                                                                     |
-| ----------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Presentación (cliente)  | `src/client`                                     | Pantallas IU-01 a IU-11, componentes, gráficos (Recharts) y cliente HTTP.                                           |
+| Capa                    | Ubicación                                                              | Responsabilidad                                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Presentación (cliente)  | `src/client`                                                           | Pantallas IU-01 a IU-11, componentes, gráficos (Recharts) y cliente HTTP.                                           |
 | Presentación (servidor) | `src/server/rutas`, `src/server/sesion.ts`, `src/server/validacion.ts` | Contrato REST, validación de entradas (Zod), autenticación y autorización.                                          |
-| Lógica de negocio       | `src/server/servicios`, `src/dominio`            | Orquestación de operaciones y reglas de negocio. El dominio son funciones puras compartidas por cliente y servidor. |
-| Datos                   | `src/server/datos`, `migrations/`                | Repositorios SQL sobre D1 y el adaptador del proveedor de mercado.                                                  |
+| Lógica de negocio       | `src/server/servicios`, `src/dominio`                                  | Orquestación de operaciones y reglas de negocio. El dominio son funciones puras compartidas por cliente y servidor. |
+| Datos                   | `src/server/datos`, `migrations/`                                      | Repositorios SQL sobre D1 y el adaptador del proveedor de mercado.                                                  |
 
 **Dominio compartido.** El cliente importa la capa de dominio para dos cosas:
 
