@@ -2,7 +2,7 @@
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
-import type { Rol } from '../compartido/tipos';
+import type { Rol, UsuarioDto } from '../compartido/tipos';
 import type { Entorno } from './entorno';
 import { ErrorAplicacion } from './errores';
 import { generarToken, sha256 } from './seguridad';
@@ -40,10 +40,13 @@ interface FilaSesion {
   rol: Rol;
 }
 
-/** Exige una sesión activa y deja el usuario en `c.get('usuario')`. */
-export const requiereSesion = createMiddleware<Entorno>(async (c, next) => {
+/**
+ * Usuario de la sesión activa o null. Aplica la expiración por inactividad (RNF-06) y renueva la sesión
+ * de forma deslizante.
+ */
+export async function usuarioDeSesion(c: Context<Entorno>): Promise<UsuarioDto | null> {
   const token = getCookie(c, COOKIE_SESION);
-  if (!token) throw new ErrorAplicacion(401, 'Debes iniciar sesión para continuar.');
+  if (!token) return null;
   const hash = await sha256(token);
   const fila = await c.env.DB.prepare(
     `SELECT s.expira_en, u.id, u.nombre, u.correo, u.rol
@@ -56,14 +59,22 @@ export const requiereSesion = createMiddleware<Entorno>(async (c, next) => {
   if (!fila || Date.parse(fila.expira_en) <= ahora) {
     if (fila) await c.env.DB.prepare('DELETE FROM sesion WHERE token_hash = ?').bind(hash).run();
     deleteCookie(c, COOKIE_SESION, { path: '/', secure: true });
-    throw new ErrorAplicacion(401, 'Tu sesión expiró. Inicia sesión de nuevo.');
+    if (fila) throw new ErrorAplicacion(401, 'Tu sesión expiró. Inicia sesión de nuevo.');
+    return null;
   }
   if (Date.parse(fila.expira_en) - ahora < DURACION_SESION_MS - MARGEN_RENOVACION_MS) {
     await c.env.DB.prepare('UPDATE sesion SET expira_en = ? WHERE token_hash = ?')
       .bind(new Date(ahora + DURACION_SESION_MS).toISOString(), hash)
       .run();
   }
-  c.set('usuario', { id: fila.id, nombre: fila.nombre, correo: fila.correo, rol: fila.rol });
+  return { id: fila.id, nombre: fila.nombre, correo: fila.correo, rol: fila.rol };
+}
+
+/** Exige una sesión activa y deja el usuario en `c.get('usuario')`. */
+export const requiereSesion = createMiddleware<Entorno>(async (c, next) => {
+  const usuario = await usuarioDeSesion(c);
+  if (!usuario) throw new ErrorAplicacion(401, 'Debes iniciar sesión para continuar.');
+  c.set('usuario', usuario);
   await next();
 });
 

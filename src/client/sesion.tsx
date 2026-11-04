@@ -23,7 +23,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api
-      .get<{ usuario: UsuarioDto }>('/auth/sesion')
+      .get<{ usuario: UsuarioDto | null }>('/auth/sesion')
       .then((r) => setUsuario(r.usuario))
       .catch(() => setUsuario(null))
       .finally(() => setCargando(false));

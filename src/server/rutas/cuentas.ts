@@ -12,7 +12,7 @@ import {
 } from '../servicios/cuentas';
 import { getCookie } from 'hono/cookie';
 import { sha256 } from '../seguridad';
-import { cerrarSesion, COOKIE_SESION, crearSesion, requiereSesion } from '../sesion';
+import { cerrarSesion, COOKIE_SESION, crearSesion, requiereSesion, usuarioDeSesion } from '../sesion';
 import { validar } from '../validacion';
 
 const iteraciones = (env: Env) => Number(env.PBKDF2_ITERACIONES) || 100_000;
@@ -61,7 +61,14 @@ export const rutasAutenticacion = new Hono<Entorno>()
     await cerrarSesion(c);
     return c.json({ mensaje: 'Sesión cerrada.' });
   })
-  .get('/sesion', requiereSesion, (c) => c.json({ usuario: c.get('usuario') }));
+  // Consulta pública: sin sesión responde { usuario: null } (la SPA la usa al cargar).
+  .get('/sesion', async (c) => {
+    try {
+      return c.json({ usuario: await usuarioDeSesion(c) });
+    } catch {
+      return c.json({ usuario: null });
+    }
+  });
 
 export const rutasPerfil = new Hono<Entorno>()
   .use(requiereSesion)

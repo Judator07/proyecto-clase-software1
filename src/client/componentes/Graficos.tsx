@@ -39,6 +39,7 @@ export function GraficoLinea({
   formatear,
   etiqueta,
   enCentavos = false,
+  formatearX = formatearFecha,
   color = '#047857',
 }: {
   puntos: PuntoSerie[];
@@ -46,6 +47,8 @@ export function GraficoLinea({
   etiqueta: string;
   /** true si los valores de la serie están en centavos (valor de portafolio). */
   enCentavos?: boolean;
+  /** Formato del eje X (por defecto, fechas dd/mm/aaaa). */
+  formatearX?: (x: string) => string;
   color?: string;
 }) {
   if (puntos.length < 2) {
@@ -70,7 +73,7 @@ export function GraficoLinea({
             tickFormatter={(v: number) => compacto.format(enCentavos ? v / 100 : v)}
           />
           <Tooltip
-            labelFormatter={(f) => formatearFecha(String(f))}
+            labelFormatter={(f) => formatearX(String(f))}
             formatter={(v) => [formatear(Number(v)), etiqueta]}
             contentStyle={{ borderRadius: 8 }}
           />
@@ -163,7 +166,7 @@ export function PanelEstadisticas({ e, formatear }: { e: Estadisticas; formatear
       {filas.map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3 border-b border-slate-100 py-1.5 text-sm">
           <dt className="text-slate-700">{k}</dt>
-          <dd className="font-semibold tabular-nums text-slate-900">{v}</dd>
+          <dd className="whitespace-nowrap font-semibold tabular-nums text-slate-900">{v}</dd>
         </div>
       ))}
     </dl>

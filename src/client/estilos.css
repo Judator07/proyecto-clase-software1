@@ -1,1 +1,40 @@
 @import 'tailwindcss';
+
+/* Contenido educativo en Markdown (RF-19). */
+.articulo {
+  @apply text-slate-800 leading-relaxed;
+}
+.articulo h2 {
+  @apply mt-8 mb-3 text-xl font-bold text-slate-900;
+}
+.articulo h3 {
+  @apply mt-6 mb-2 text-lg font-semibold text-slate-900;
+}
+.articulo p {
+  @apply my-3;
+}
+.articulo ul {
+  @apply my-3 list-disc pl-6;
+}
+.articulo ol {
+  @apply my-3 list-decimal pl-6;
+}
+.articulo li {
+  @apply my-1;
+}
+.articulo strong {
+  @apply text-slate-900;
+}
+.articulo table {
+  @apply my-4 w-full border-collapse text-sm;
+}
+.articulo th,
+.articulo td {
+  @apply border border-slate-300 px-3 py-2 text-left;
+}
+.articulo th {
+  @apply bg-slate-100;
+}
+.articulo code {
+  @apply rounded bg-slate-100 px-1;
+}
