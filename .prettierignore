@@ -1,0 +1,8 @@
+dist
+coverage
+node_modules
+.wrangler
+worker-configuration.d.ts
+migrations/0004_historicos.sql
+docs/entregas
+package-lock.json

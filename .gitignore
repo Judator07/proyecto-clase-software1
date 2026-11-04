@@ -1,0 +1,25 @@
+# Dependencias y compilados
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Cloudflare / Wrangler (estado local de D1, logs)
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Pruebas E2E
+playwright-report/
+test-results/
+
+# Informe generado (se publica como artefacto)
+docs/informe/build/
+
+# Sistema / editores
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.log

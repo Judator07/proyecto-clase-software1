@@ -1,0 +1,56 @@
+{
+  "name": "simulador-inversion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma web educativa para simular inversiones en acciones, ETF, criptomonedas y cuentas de ahorro con dinero ficticio.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "npm run build && vite preview",
+    "deploy": "wrangler d1 migrations apply DB --remote --config wrangler.jsonc && wrangler deploy",
+    "db:migrar:local": "wrangler d1 migrations apply DB --local --config wrangler.jsonc",
+    "typecheck": "tsc -b",
+    "lint": "eslint .",
+    "formato": "prettier --write .",
+    "formato:revisar": "prettier --check .",
+    "test": "vitest run",
+    "test:cobertura": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "0.9.1",
+    "hono": "4.13.16",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "react-router": "8.5.1",
+    "recharts": "3.10.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.67.0",
+    "@eslint/js": "^10.0.0",
+    "@tailwindcss/vite": "4.3.4",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "@vitest/coverage-v8": "4.1.12",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "^16.0.0",
+    "prettier": "3.9.10",
+    "tailwindcss": "4.3.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "4.1.12",
+    "wrangler": "4.157.0"
+  }
+}

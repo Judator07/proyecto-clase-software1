@@ -1,0 +1,33 @@
+// Configuración del Worker de Cloudflare: un único Worker sirve la SPA (Static Assets)
+// y la API REST bajo /api/*. La base de datos relacional es Cloudflare D1 (SQLite).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "simulador-inversion",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2026-10-15",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "simulador-inversion-db",
+      "database_id": "9e63e22a-2244-4b10-8ffe-26f71a5286f9",
+      "migrations_dir": "migrations",
+    },
+  ],
+  // RF-17: actualización periódica de precios (intervalo objetivo de 15 minutos).
+  "triggers": {
+    "crons": ["*/15 * * * *"],
+  },
+  "vars": {
+    // Intervalo mínimo entre actualizaciones de precios, ajustable a los límites del proveedor (TBD-1).
+    "INTERVALO_ACTUALIZACION_MIN": "15",
+    // Iteraciones de PBKDF2 para nuevas contraseñas (RNF-05). Ver docs/informe/04-diseno.md.
+    "PBKDF2_ITERACIONES": "100000",
+  },
+  "observability": {
+    "enabled": true,
+  },
+}
