@@ -53,3 +53,10 @@ const formatoISO = new Intl.DateTimeFormat('en-CA', {
 export function fechaISOColombia(fecha: Date): string {
   return formatoISO.format(fecha);
 }
+
+/** Precio unitario en USD: 2 decimales, o 4 si es menor que 1 (criptomonedas de bajo precio). */
+export function formatearPrecio(precio: number | null): string {
+  if (precio === null || !Number.isFinite(precio)) return 'Sin precio';
+  const decimales = Math.abs(precio) < 1 ? 4 : 2;
+  return `USD ${precio.toLocaleString('es-CO', { minimumFractionDigits: decimales, maximumFractionDigits: decimales })}`;
+}

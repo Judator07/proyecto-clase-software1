@@ -111,22 +111,29 @@ export async function crearArticulo(db: D1Database, autorId: number, d: DatosArt
   let slug = base;
   for (let n = 2; usados.has(slug); n++) slug = `${base}-${n}`;
   const ahora = new Date().toISOString();
-  const fila = await db
-    .prepare(
-      `INSERT INTO contenido_educativo (slug, titulo, tema, resumen, cuerpo, estado, autor_id, publicado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
-    )
-    .bind(
-      slug,
-      d.titulo.trim(),
-      d.tema,
-      d.resumen.trim(),
-      d.cuerpo,
-      d.estado,
-      autorId,
-      d.estado === 'PUBLICADO' ? ahora : null,
-    )
-    .first<FilaArticulo>();
+  let fila: FilaArticulo | null;
+  try {
+    fila = await db
+      .prepare(
+        `INSERT INTO contenido_educativo (slug, titulo, tema, resumen, cuerpo, estado, autor_id, publicado_en)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+      )
+      .bind(
+        slug,
+        d.titulo.trim(),
+        d.tema,
+        d.resumen.trim(),
+        d.cuerpo,
+        d.estado,
+        autorId,
+        d.estado === 'PUBLICADO' ? ahora : null,
+      )
+      .first<FilaArticulo>();
+  } catch (e) {
+    if (String(e).includes('UNIQUE'))
+      throw new ErrorAplicacion(409, 'Ya existe un artículo con un título equivalente. Intenta de nuevo.');
+    throw e;
+  }
   return aArticulo(fila!);
 }
 

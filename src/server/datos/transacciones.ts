@@ -103,13 +103,15 @@ export async function listarTransacciones(db: D1Database, usuarioId: number, f: 
     condiciones.push('t.portafolio_id = ?');
     valores.push(f.portafolioId);
   }
+  // Los días se interpretan en hora de Colombia (UTC−5): el día D va de D 05:00Z a D+1 05:00Z.
   if (f.desde) {
     condiciones.push('t.creado_en >= ?');
-    valores.push(`${f.desde}T00:00:00`);
+    valores.push(`${f.desde}T05:00:00.000Z`);
   }
   if (f.hasta) {
-    condiciones.push('t.creado_en <= ?');
-    valores.push(`${f.hasta}T23:59:59.999Z`);
+    const siguiente = new Date(Date.parse(`${f.hasta}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+    condiciones.push('t.creado_en < ?');
+    valores.push(`${siguiente}T05:00:00.000Z`);
   }
   if (f.tipo) {
     condiciones.push('t.tipo = ?');
@@ -120,7 +122,7 @@ export async function listarTransacciones(db: D1Database, usuarioId: number, f: 
     valores.push(f.simbolo);
   }
   const { results } = await db
-    .prepare(`${SELECT_TRANSACCION} WHERE ${condiciones.join(' AND ')} ORDER BY t.creado_en DESC, t.id DESC LIMIT 500`)
+    .prepare(`${SELECT_TRANSACCION} WHERE ${condiciones.join(' AND ')} ORDER BY t.creado_en DESC, t.id DESC LIMIT 1000`)
     .bind(...valores)
     .all<FilaTransaccion>();
   return results.map(aTransaccionDto);

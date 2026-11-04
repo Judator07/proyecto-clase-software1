@@ -7,7 +7,7 @@
 import type { CotizacionOrdenDto, ResultadoOrdenDto, TipoTransaccion } from '../../compartido/tipos';
 import { validarParametrosAhorro, valorDepositoALaFecha, type PeriodosPorAnio } from '../../dominio/ahorro';
 import { aCantidadE8, desdeCantidadE8, formatearUSD, montoCentavos } from '../../dominio/dinero';
-import { formatearCantidad } from '../../dominio/formato';
+import { formatearCantidad, formatearPrecio } from '../../dominio/formato';
 import { gananciaRealizadaCentavos } from '../../dominio/portafolio';
 import { validarCantidad } from '../../dominio/reglas';
 import { aInstrumentoDto, buscarInstrumentoPorSimbolo, type FilaInstrumento } from '../datos/mercado';
@@ -16,6 +16,7 @@ import {
   buscarPortafolio,
   buscarPosicion,
   stmtCerrarDeposito,
+  stmtExigirPortafolioActivo,
   stmtLimpiarPosicionesVacias,
   stmtsRestarPosicion,
   stmtSumarPosicion,
@@ -34,6 +35,8 @@ export interface DatosOrden {
   simbolo: string;
   tipo: 'COMPRA' | 'VENTA';
   cantidad: number;
+  /** Precio que el usuario vio en el resumen; si cambió antes de confirmar, se pide revisar (RN-03). */
+  precioCotizado?: number;
 }
 
 function stmtAjustarSaldo(db: D1Database, usuarioId: number, deltaCentavos: number) {
@@ -122,6 +125,17 @@ export async function ejecutarOrden(db: D1Database, usuarioId: number, d: DatosO
     registrar(db, { ...base, estado: 'RECHAZADA', motivo }, `Orden rechazada: ${motivo}`);
 
   if (o.precio === null) return rechazar('El instrumento no tiene un precio disponible.');
+  if (d.precioCotizado !== undefined && Math.abs(d.precioCotizado - o.precio) > 1e-9) {
+    throw new ErrorAplicacion(
+      409,
+      `El precio cambió de ${formatearPrecio(d.precioCotizado)} a ${formatearPrecio(o.precio)} mientras confirmabas. Revisa el nuevo resumen.`,
+      { precioActual: o.precio },
+    );
+  }
+  /** Si el batch falló porque el portafolio se eliminó en paralelo, se informa como no encontrado. */
+  const exigirPortafolio = async () => {
+    if (!(await buscarPortafolio(db, o.portafolio.id, usuarioId))) throw noEncontrado('Portafolio');
+  };
 
   if (d.tipo === 'COMPRA') {
     if (o.instrumento.activo !== 1) return rechazar('El instrumento fue desactivado y no está disponible para compra.');
@@ -135,11 +149,12 @@ export async function ejecutarOrden(db: D1Database, usuarioId: number, d: DatosO
     if (o.saldo < o.monto) return rechazar(insuficiente(o.saldo)); // RN-04: sin apalancamiento
     try {
       const resultados = await db.batch([
+        stmtExigirPortafolioActivo(db, o.portafolio.id),
         stmtAjustarSaldo(db, usuarioId, -o.monto),
         stmtSumarPosicion(db, o.portafolio.id, o.instrumento.id, o.cantidadE8, o.precio),
         stmtInsertarTransaccion(db, { ...base, estado: 'EJECUTADA' }),
       ]);
-      const id = (resultados[2].results[0] as { id: number }).id;
+      const id = (resultados[3].results[0] as { id: number }).id;
       return resultado(
         db,
         usuarioId,
@@ -148,7 +163,10 @@ export async function ejecutarOrden(db: D1Database, usuarioId: number, d: DatosO
       );
     } catch (e) {
       // Otra operación concurrente consumió el saldo: el CHECK revirtió todo el batch.
-      if (esViolacionRestriccion(e)) return rechazar(insuficiente(await saldoDe(db, usuarioId)));
+      if (esViolacionRestriccion(e)) {
+        await exigirPortafolio();
+        return rechazar(insuficiente(await saldoDe(db, usuarioId)));
+      }
       throw e;
     }
   }
@@ -163,12 +181,13 @@ export async function ejecutarOrden(db: D1Database, usuarioId: number, d: DatosO
   const ganancia = gananciaRealizadaCentavos(o.cantidadE8, o.precio, o.posicion.costo_promedio);
   try {
     const resultados = await db.batch([
+      stmtExigirPortafolioActivo(db, o.portafolio.id),
       ...stmtsRestarPosicion(db, o.portafolio.id, o.instrumento.id, o.cantidadE8),
       stmtLimpiarPosicionesVacias(db, o.portafolio.id),
       stmtAjustarSaldo(db, usuarioId, o.monto),
       stmtInsertarTransaccion(db, { ...base, estado: 'EJECUTADA', gananciaRealizadaCentavos: ganancia }),
     ]);
-    const id = (resultados[4].results[0] as { id: number }).id;
+    const id = (resultados[5].results[0] as { id: number }).id;
     const signo = ganancia >= 0 ? 'ganancia' : 'pérdida';
     return resultado(
       db,
@@ -177,7 +196,10 @@ export async function ejecutarOrden(db: D1Database, usuarioId: number, d: DatosO
       `Vendiste ${formatearCantidad(d.cantidad)} ${o.instrumento.simbolo} por ${formatearUSD(o.monto)} con una ${signo} realizada de ${formatearUSD(Math.abs(ganancia))}.`,
     );
   } catch (e) {
-    if (esViolacionRestriccion(e)) return excedida();
+    if (esViolacionRestriccion(e)) {
+      await exigirPortafolio();
+      return excedida();
+    }
     throw e;
   }
 }
@@ -244,6 +266,7 @@ export async function registrarDeposito(
   if (saldo < d.montoCentavos) return rechazar(insuficiente(saldo));
   try {
     const resultados = await db.batch([
+      stmtExigirPortafolioActivo(db, portafolio.id),
       stmtAjustarSaldo(db, usuarioId, -d.montoCentavos),
       db
         .prepare(
@@ -261,7 +284,7 @@ export async function registrarDeposito(
         ),
       stmtInsertarTransaccion(db, { ...base, estado: 'EJECUTADA', depositoId: 'ULTIMO_INSERTADO' }),
     ]);
-    const id = (resultados[2].results[0] as { id: number }).id;
+    const id = (resultados[3].results[0] as { id: number }).id;
     return resultado(db, usuarioId, id, `Depositaste ${formatearUSD(d.montoCentavos)} en "${portafolio.nombre}".`);
   } catch (e) {
     if (esViolacionRestriccion(e)) return rechazar(insuficiente(await saldoDe(db, usuarioId)));

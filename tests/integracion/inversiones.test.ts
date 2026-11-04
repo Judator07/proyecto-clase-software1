@@ -346,3 +346,38 @@ describe('RF-18 / RF-19 / RF-20 administración y contenido', () => {
     await expect(fijarSaldo(c, -1)).rejects.toThrow(/CHECK constraint failed/);
   });
 });
+
+describe('regresiones de la revisión crítica (órdenes y precios)', () => {
+  it('RN-03: si el precio cambió entre el resumen y la confirmación, se pide revisar sin ejecutar', async () => {
+    const { c, portafolioId } = await registrarConPortafolio();
+    const r = await c.post('/ordenes', {
+      portafolioId,
+      simbolo: 'AAPL',
+      tipo: 'COMPRA',
+      cantidad: 1,
+      precioCotizado: 149,
+    });
+    expect(r.estado).toBe(409);
+    expect(r.datos.error).toContain('El precio cambió');
+    expect((await c.get('/transacciones')).datos).toEqual([]);
+  });
+
+  it('RF-17: los instrumentos desactivados siguen recibiendo precio (se pueden vender)', async () => {
+    await env.DB.prepare("UPDATE instrumento SET activo = 0 WHERE simbolo = 'KO'").run();
+    await actualizarPrecios(env.DB, proveedor, new Date());
+    const ko = await env.DB.prepare("SELECT estado_precio FROM instrumento WHERE simbolo = 'KO'").first<{
+      estado_precio: string;
+    }>();
+    expect(ko!.estado_precio).toBe('ACTUALIZADO');
+    await env.DB.prepare("UPDATE instrumento SET activo = 1 WHERE simbolo = 'KO'").run();
+  });
+
+  it('RF-11: los filtros de fecha usan la hora de Colombia', async () => {
+    const { c, portafolioId } = await registrarConPortafolio();
+    await comprar(c, portafolioId, 'AAPL', 1);
+    // 20:00 del 4 de noviembre en Bogotá = 01:00Z del 5 de noviembre.
+    await env.DB.prepare("UPDATE transaccion SET creado_en = '2026-11-05T01:00:00.000Z'").run();
+    expect((await c.get('/transacciones?desde=2026-11-04&hasta=2026-11-04')).datos).toHaveLength(1);
+    expect((await c.get('/transacciones?desde=2026-11-05&hasta=2026-11-05')).datos).toHaveLength(0);
+  });
+});

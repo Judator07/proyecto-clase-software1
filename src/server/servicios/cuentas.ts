@@ -3,7 +3,7 @@ import type { PerfilDto } from '../../compartido/tipos';
 import { SALDO_INICIAL_CENTAVOS } from '../../dominio/dinero';
 import { estaEnBancarrota, validarContrasena } from '../../dominio/reglas';
 import { listarPortafolios } from '../datos/portafolios';
-import { ErrorAplicacion } from '../errores';
+import { ErrorAplicacion, esViolacionRestriccion } from '../errores';
 import { derivarHash, generarSal, verificarContrasena } from '../seguridad';
 import { resumenVacio, valorarPortafoliosDeUsuario, valorInvertidoTotal } from './valoracion';
 
@@ -73,12 +73,23 @@ export async function registrarUsuario(
   }
 }
 
+/** Sal fija solo para igualar el tiempo de respuesta cuando el correo no existe (evita enumerar cuentas). */
+const SAL_FICTICIA = 'AAAAAAAAAAAAAAAAAAAAAA==';
+
 /** RF-02: autentica con correo y contraseña; bloquea 15 minutos tras 5 intentos fallidos consecutivos. */
-export async function autenticar(db: D1Database, correo: string, contrasena: string): Promise<FilaUsuario> {
+export async function autenticar(
+  db: D1Database,
+  correo: string,
+  contrasena: string,
+  iteraciones: number,
+): Promise<FilaUsuario> {
   const usuario = await buscarPorCorreo(db, correo);
   const ahora = Date.now();
   const generico = new ErrorAplicacion(401, 'Correo o contraseña incorrectos.');
-  if (!usuario) throw generico;
+  if (!usuario) {
+    await derivarHash(contrasena, SAL_FICTICIA, iteraciones);
+    throw generico;
+  }
   if (usuario.bloqueado_hasta && Date.parse(usuario.bloqueado_hasta) > ahora) {
     throw new ErrorAplicacion(
       423,
@@ -94,19 +105,23 @@ export async function autenticar(db: D1Database, correo: string, contrasena: str
     }
     return usuario;
   }
-  const intentos = usuario.intentos_fallidos + 1;
-  if (intentos >= MAX_INTENTOS_FALLIDOS) {
-    const hasta = new Date(ahora + MINUTOS_BLOQUEO * 60_000).toISOString();
-    await db
-      .prepare('UPDATE usuario SET intentos_fallidos = 0, bloqueado_hasta = ? WHERE id = ?')
-      .bind(hasta, usuario.id)
-      .run();
+  // Incremento atómico: solicitudes simultáneas no pueden eludir el bloqueo.
+  const hasta = new Date(ahora + MINUTOS_BLOQUEO * 60_000).toISOString();
+  const fila = await db
+    .prepare(
+      `UPDATE usuario
+          SET bloqueado_hasta = CASE WHEN intentos_fallidos + 1 >= ? THEN ? ELSE bloqueado_hasta END,
+              intentos_fallidos = CASE WHEN intentos_fallidos + 1 >= ? THEN 0 ELSE intentos_fallidos + 1 END
+        WHERE id = ? RETURNING bloqueado_hasta`,
+    )
+    .bind(MAX_INTENTOS_FALLIDOS, hasta, MAX_INTENTOS_FALLIDOS, usuario.id)
+    .first<{ bloqueado_hasta: string | null }>();
+  if (fila?.bloqueado_hasta && Date.parse(fila.bloqueado_hasta) > ahora) {
     throw new ErrorAplicacion(
       423,
       `La cuenta se bloqueó durante ${MINUTOS_BLOQUEO} minutos por ${MAX_INTENTOS_FALLIDOS} intentos fallidos consecutivos.`,
     );
   }
-  await db.prepare('UPDATE usuario SET intentos_fallidos = ? WHERE id = ?').bind(intentos, usuario.id).run();
   throw generico;
 }
 
@@ -153,6 +168,7 @@ export async function actualizarPerfil(
   iteraciones: number,
   usuarioId: number,
   datos: { nombre?: string; contrasenaActual: string; nuevaContrasena?: string },
+  tokenHashActual?: string,
 ): Promise<void> {
   const usuario = await buscarPorId(db, usuarioId);
   if (!usuario) throw new ErrorAplicacion(401, 'Tu sesión ya no es válida.');
@@ -174,6 +190,10 @@ export async function actualizarPerfil(
         .prepare('UPDATE usuario SET hash_contrasena = ?, sal = ?, iteraciones = ? WHERE id = ?')
         .bind(hash, sal, iteraciones, usuarioId),
     );
+    // Al cambiar la contraseña se cierran las demás sesiones abiertas (RNF-06).
+    cambios.push(
+      db.prepare('DELETE FROM sesion WHERE usuario_id = ? AND token_hash <> ?').bind(usuarioId, tokenHashActual ?? ''),
+    );
   }
   if (cambios.length) await db.batch(cambios);
 }
@@ -187,21 +207,36 @@ export async function reiniciarPorBancarrota(db: D1Database, usuarioId: number):
   if (!perfil.enBancarrota) {
     throw new ErrorAplicacion(409, 'Tu patrimonio es igual o mayor que USD 100,00: no puedes reiniciar la cuenta.');
   }
+  const fila = await buscarPorId(db, usuarioId);
   const ahora = new Date().toISOString();
   const deMisPortafolios = 'portafolio_id IN (SELECT id FROM portafolio WHERE usuario_id = ?)';
-  await db.batch([
-    db.prepare(`DELETE FROM posicion WHERE ${deMisPortafolios}`).bind(usuarioId),
-    db
-      .prepare(
-        `UPDATE deposito_ahorro SET estado = 'CERRADO', fecha_cierre = ? WHERE estado = 'ACTIVO' AND ${deMisPortafolios}`,
-      )
-      .bind(ahora, usuarioId),
-    db
-      .prepare(
-        'UPDATE usuario SET saldo_centavos = ?, contador_bancarrotas = contador_bancarrotas + 1, fecha_ultimo_reinicio = ? WHERE id = ?',
-      )
-      .bind(SALDO_INICIAL_CENTAVOS, ahora, usuarioId),
-  ]);
+  // Si otra solicitud cambió el saldo o ya reinició la cuenta, el saldo -1 viola el CHECK y nada se aplica.
+  const guarda = db
+    .prepare(
+      `UPDATE usuario SET saldo_centavos = CASE WHEN contador_bancarrotas = ? AND saldo_centavos = ? THEN saldo_centavos ELSE -1 END
+        WHERE id = ?`,
+    )
+    .bind(fila!.contador_bancarrotas, fila!.saldo_centavos, usuarioId);
+  try {
+    await db.batch([
+      guarda,
+      db.prepare(`DELETE FROM posicion WHERE ${deMisPortafolios}`).bind(usuarioId),
+      db
+        .prepare(
+          `UPDATE deposito_ahorro SET estado = 'CERRADO', fecha_cierre = ? WHERE estado = 'ACTIVO' AND ${deMisPortafolios}`,
+        )
+        .bind(ahora, usuarioId),
+      db
+        .prepare(
+          'UPDATE usuario SET saldo_centavos = ?, contador_bancarrotas = contador_bancarrotas + 1, fecha_ultimo_reinicio = ? WHERE id = ?',
+        )
+        .bind(SALDO_INICIAL_CENTAVOS, ahora, usuarioId),
+    ]);
+  } catch (e) {
+    if (esViolacionRestriccion(e))
+      throw new ErrorAplicacion(409, 'Tu cuenta cambió mientras se reiniciaba. Intenta de nuevo.');
+    throw e;
+  }
   return obtenerPerfil(db, usuarioId);
 }
 

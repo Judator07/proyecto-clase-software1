@@ -192,3 +192,10 @@ export function stmtCerrarDeposito(db: D1Database, depositoId: number, estado: '
     )
     .bind(estado, fecha, depositoId);
 }
+
+/** Aborta el batch (CHECK del nombre) si el portafolio fue eliminado por otra solicitud concurrente. */
+export function stmtExigirPortafolioActivo(db: D1Database, portafolioId: number) {
+  return db
+    .prepare("UPDATE portafolio SET nombre = CASE WHEN eliminado_en IS NULL THEN nombre ELSE '' END WHERE id = ?")
+    .bind(portafolioId);
+}

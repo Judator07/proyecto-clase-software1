@@ -83,7 +83,7 @@ export async function actualizarPrecios(
   proveedor: ProveedorDatosMercado,
   ahora: Date,
 ): Promise<{ actualizados: number; fallidos: string[] }> {
-  const instrumentos = (await listarInstrumentos(db, {})).filter(
+  const instrumentos = (await listarInstrumentos(db, { incluirInactivos: true })).filter(
     (i): i is FilaInstrumento & { simbolo_proveedor: string } => i.tipo !== 'AHORRO' && !!i.simbolo_proveedor,
   );
   const respuestas = await Promise.allSettled(
@@ -106,6 +106,8 @@ export async function actualizarPrecios(
       sentencias.push(stmtMarcarDesactualizado(db, instrumento.id, motivo));
     }
   });
+  // Purga de sesiones expiradas (RNF-06).
+  sentencias.push(db.prepare('DELETE FROM sesion WHERE expira_en < ?').bind(ahora.toISOString()));
   await ejecutarEnLotes(db, sentencias);
   await guardarValoracionesDiarias(db, ahora);
   return { actualizados: instrumentos.length - fallidos.length, fallidos };

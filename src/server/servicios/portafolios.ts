@@ -10,6 +10,7 @@ import {
   buscarPortafolio,
   listarPortafolios,
   stmtCerrarDeposito,
+  stmtLimpiarPosicionesVacias,
   stmtsRestarPosicion,
   valoracionesDesde,
   type FilaPortafolio,
@@ -176,15 +177,20 @@ export async function eliminarPortafolio(
     );
   }
   sentencias.push(
-    db.prepare('DELETE FROM posicion WHERE portafolio_id = ?').bind(id),
+    stmtLimpiarPosicionesVacias(db, id),
     db.prepare('UPDATE usuario SET saldo_centavos = saldo_centavos + ? WHERE id = ?').bind(total, usuarioId),
-    // Si otra solicitud ya lo eliminó, el nombre vacío viola el CHECK y se revierte todo (sin doble abono).
+    // Si otra solicitud ya lo eliminó o compró en él mientras tanto (quedan unidades sin liquidar), el nombre
+    // vacío viola el CHECK y se revierte todo: no hay doble abono ni unidades perdidas.
     db
       .prepare(
-        `UPDATE portafolio SET eliminado_en = ?, nombre = CASE WHEN eliminado_en IS NULL THEN nombre ELSE '' END
+        `UPDATE portafolio
+            SET eliminado_en = ?,
+                nombre = CASE WHEN eliminado_en IS NULL
+                               AND NOT EXISTS (SELECT 1 FROM posicion WHERE portafolio_id = ? AND cantidad_e8 > 0)
+                              THEN nombre ELSE '' END
           WHERE id = ? AND usuario_id = ?`,
       )
-      .bind(ahora, id, usuarioId),
+      .bind(ahora, id, id, usuarioId),
   );
   try {
     await db.batch(sentencias);

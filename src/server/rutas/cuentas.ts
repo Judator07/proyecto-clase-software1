@@ -10,7 +10,9 @@ import {
   registrarUsuario,
   reiniciarPorBancarrota,
 } from '../servicios/cuentas';
-import { cerrarSesion, crearSesion, requiereSesion } from '../sesion';
+import { getCookie } from 'hono/cookie';
+import { sha256 } from '../seguridad';
+import { cerrarSesion, COOKIE_SESION, crearSesion, requiereSesion } from '../sesion';
 import { validar } from '../validacion';
 
 const iteraciones = (env: Env) => Number(env.PBKDF2_ITERACIONES) || 100_000;
@@ -50,7 +52,7 @@ export const rutasAutenticacion = new Hono<Entorno>()
     ),
     async (c) => {
       const { correo, contrasena } = c.req.valid('json');
-      const u = await autenticar(c.env.DB, correo, contrasena);
+      const u = await autenticar(c.env.DB, correo, contrasena, iteraciones(c.env));
       await crearSesion(c, u.id);
       return c.json({ usuario: { id: u.id, nombre: u.nombre, correo: u.correo, rol: u.rol } });
     },
@@ -79,7 +81,14 @@ export const rutasPerfil = new Hono<Entorno>()
       if (datos.nombre === undefined && !datos.nuevaContrasena) {
         throw new ErrorAplicacion(400, 'No hay cambios para guardar.');
       }
-      await actualizarPerfil(c.env.DB, iteraciones(c.env), c.get('usuario').id, datos);
+      const token = getCookie(c, COOKIE_SESION);
+      await actualizarPerfil(
+        c.env.DB,
+        iteraciones(c.env),
+        c.get('usuario').id,
+        datos,
+        token ? await sha256(token) : undefined,
+      );
       return c.json(await obtenerPerfil(c.env.DB, c.get('usuario').id));
     },
   )

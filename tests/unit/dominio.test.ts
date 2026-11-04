@@ -7,7 +7,14 @@ import { proyectarAhorro, validarParametrosAhorro, valorDepositoALaFecha, valorF
 import { aCantidadE8 } from '../../src/dominio/dinero';
 import { ESCENARIOS_PREDEFINIDOS, simularEscenario, validarVariables } from '../../src/dominio/escenarios';
 import { calcularEstadisticas, desviacionEstandarMuestral, mediaMovil } from '../../src/dominio/estadisticas';
-import { formatearCantidad, formatearFecha, formatearFechaHora, formatearPct } from '../../src/dominio/formato';
+import {
+  fechaISOColombia,
+  formatearCantidad,
+  formatearFecha,
+  formatearFechaHora,
+  formatearPct,
+  formatearPrecio,
+} from '../../src/dominio/formato';
 import { gananciaRealizadaCentavos, nuevoCostoPromedio, resumirPortafolio } from '../../src/dominio/portafolio';
 import {
   correoValido,
@@ -284,5 +291,11 @@ describe('formatos de presentación (SRS 1.2 y 3.1)', () => {
     expect(formatearPct(-3)).toBe('-3,00 %');
     expect(formatearCantidad(0.05)).toBe('0,05');
     expect(formatearCantidad(1500)).toBe('1.500');
+  });
+  it('precios unitarios y fecha calendario de Colombia', () => {
+    expect(formatearPrecio(150)).toBe('USD 150,00');
+    expect(formatearPrecio(0.18699)).toBe('USD 0,1870');
+    expect(formatearPrecio(null)).toBe('Sin precio');
+    expect(fechaISOColombia(new Date('2026-11-04T03:00:00Z'))).toBe('2026-11-03');
   });
 });

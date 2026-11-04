@@ -92,6 +92,7 @@ const esquemaOrden = z.object({
   simbolo: z.string().trim().min(1).max(20),
   tipo: z.enum(['COMPRA', 'VENTA']),
   cantidad: z.number('La cantidad debe ser un número.'),
+  precioCotizado: z.number().positive().optional(),
 });
 
 export const rutasOrdenes = new Hono<Entorno>()

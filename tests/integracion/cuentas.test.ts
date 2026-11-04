@@ -195,3 +195,25 @@ describe('RF-05 / RN-09 reinicio por bancarrota', () => {
     expect(await usuarioIdDe(c)).toBeGreaterThan(0);
   });
 });
+
+describe('regresiones de la revisión crítica', () => {
+  it('RNF-06: cambiar la contraseña cierra las demás sesiones abiertas', async () => {
+    const a = await registrar('sesiones@prueba.co');
+    const b = new Cliente();
+    await b.post('/auth/ingreso', { correo: 'sesiones@prueba.co', contrasena: CONTRASENA });
+    expect((await b.get('/perfil')).estado).toBe(200);
+    await a.patch('/perfil', { contrasenaActual: CONTRASENA, nuevaContrasena: 'Cambiada789' });
+    expect((await a.get('/perfil')).estado).toBe(200);
+    expect((await b.get('/perfil')).estado).toBe(401);
+  });
+
+  it('RF-02: el bloqueo no se elude con intentos simultáneos', async () => {
+    await registrar('paralelo@prueba.co');
+    const intentos = Array.from({ length: 8 }, () =>
+      new Cliente().post('/auth/ingreso', { correo: 'paralelo@prueba.co', contrasena: 'Mala1234' }),
+    );
+    await Promise.all(intentos);
+    const r = await new Cliente().post('/auth/ingreso', { correo: 'paralelo@prueba.co', contrasena: CONTRASENA });
+    expect(r.estado).toBe(423);
+  });
+});
