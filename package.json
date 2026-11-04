@@ -21,7 +21,9 @@
     "test": "vitest run",
     "test:cobertura": "vitest run --project unit --coverage",
     "test:e2e": "playwright test",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "informe:pdf": "node scripts/generar-pdf.mjs",
+    "test:carga": "node tests/carga/carga.mjs"
   },
   "dependencies": {
     "@hono/zod-validator": "0.9.1",
