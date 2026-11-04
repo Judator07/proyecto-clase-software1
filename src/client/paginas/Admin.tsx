@@ -69,7 +69,7 @@ function Catalogo() {
         {cargando && !datos && <Cargando />}
         {error && <Alerta tipo="error">{error}</Alerta>}
         {datos && (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabla con desplazamiento">
             <table className="w-full min-w-[34rem] text-sm">
               <thead className="text-left">
                 <tr className="border-b border-slate-200">

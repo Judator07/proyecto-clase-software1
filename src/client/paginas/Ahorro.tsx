@@ -122,7 +122,12 @@ export default function Ahorro() {
                   enCentavos
                   etiqueta="Saldo"
                 />
-                <div className="mt-4 max-h-72 overflow-y-auto">
+                <div
+                  className="mt-4 max-h-72 overflow-y-auto"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Tabla de evolución por periodo"
+                >
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-white text-left">
                       <tr>

@@ -53,7 +53,7 @@ export default function Instrumentos() {
               setTexto(e.target.value);
               if (!e.target.value) setBusqueda('');
             }}
-            className="min-h-10 flex-1 rounded-lg border border-slate-400 bg-white px-3"
+            className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-400 bg-white px-3"
           />
           <button
             type="submit"
@@ -79,7 +79,12 @@ export default function Instrumentos() {
       {error && <Alerta tipo="error">{error}</Alerta>}
       {datos && datos.length === 0 && <Vacio>No se encontraron instrumentos.</Vacio>}
       {datos && datos.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div
+          className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm"
+          tabIndex={0}
+          role="region"
+          aria-label="Tabla con desplazamiento"
+        >
           <table className="w-full min-w-[36rem] text-sm">
             <caption className="sr-only">Instrumentos disponibles para la simulación</caption>
             <thead className="bg-slate-100 text-left text-slate-800">

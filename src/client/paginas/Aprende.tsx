@@ -37,7 +37,7 @@ export default function Aprende() {
             placeholder="Busca un término, por ejemplo: volatilidad"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            className="min-h-10 flex-1 rounded-lg border border-slate-400 bg-white px-3"
+            className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-400 bg-white px-3"
           />
           <button
             type="submit"

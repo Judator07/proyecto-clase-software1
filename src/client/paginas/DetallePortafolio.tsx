@@ -116,7 +116,7 @@ function Historial({ portafolioId, version }: { portafolioId: number; version: n
       {error && <Alerta tipo="error">{error}</Alerta>}
       {datos && datos.length === 0 && <Vacio>Aún no hay operaciones.</Vacio>}
       {datos && datos.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabla con desplazamiento">
           <table className="w-full min-w-[44rem] text-sm">
             <thead className="text-left text-slate-800">
               <tr className="border-b border-slate-200">
@@ -325,7 +325,7 @@ export default function DetallePortafolio() {
         {d.posiciones.length === 0 ? (
           <Vacio>No hay posiciones abiertas.</Vacio>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabla con desplazamiento">
             <table className="w-full min-w-[48rem] text-sm">
               <thead className="text-left text-slate-800">
                 <tr className="border-b border-slate-200">
@@ -384,7 +384,7 @@ export default function DetallePortafolio() {
 
       {d.depositos.length > 0 && (
         <Tarjeta titulo="Depósitos de ahorro">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabla con desplazamiento">
             <table className="w-full min-w-[44rem] text-sm">
               <thead className="text-left text-slate-800">
                 <tr className="border-b border-slate-200">
