@@ -27,7 +27,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.{js,ts}', 'tests/**/*.ts', '*.config.{js,ts}'],
-    languageOptions: { globals: globals.node },
+    files: ['scripts/**/*.{js,mjs,ts}', 'tests/**/*.{ts,mjs}', '*.config.{js,ts}'],
+    // Las pruebas E2E ejecutan código en el navegador (page.evaluate).
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
+    // Las pruebas inspeccionan respuestas JSON arbitrarias de la API.
+    files: ['tests/**/*.{ts,mjs}'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
 );

@@ -1,0 +1,73 @@
+// Recorrido E2E de verificación visual (uso interno del agente). Uso: node tests/e2e/recorrido.mjs <url> <carpeta>
+import { chromium } from '@playwright/test';
+const [url, carpeta] = process.argv.slice(2);
+const navegador = await chromium.launch();
+const pagina = await navegador.newPage({ viewport: { width: 1280, height: 900 } });
+const errores = [];
+pagina.on('pageerror', (e) => errores.push(String(e)));
+pagina.on('console', (m) => m.type() === 'error' && errores.push(m.text()));
+const foto = (n) => pagina.screenshot({ path: `${carpeta}/${n}.png`, fullPage: true });
+const correo = `demo${Date.now()}@prueba.co`;
+const t0 = Date.now();
+await pagina.goto(url);
+await foto('01-inicio');
+await pagina.getByRole('link', { name: 'Crear cuenta gratis' }).click();
+await pagina.getByLabel('Nombre completo').fill('Ana Demo');
+await pagina.getByLabel('Correo electrónico').fill(correo);
+await pagina.getByLabel('Contraseña', { exact: true }).fill('Segura123');
+await pagina.getByLabel('Confirmar contraseña').fill('Segura123');
+await pagina.getByRole('checkbox').check();
+await pagina.getByRole('button', { name: 'Crear cuenta' }).click();
+await pagina.waitForURL('**/panel**');
+await pagina.getByText('Patrimonio total').waitFor();
+await foto('02-panel');
+// Primera compra en 3 pasos desde el detalle del instrumento.
+await pagina.goto(`${url}/instrumentos`);
+await pagina.getByRole('link', { name: 'AAPL' }).waitFor();
+await foto('03-instrumentos');
+await pagina.getByRole('link', { name: 'AAPL' }).click();
+await pagina.getByRole('button', { name: 'Crear mi primer portafolio' }).click();
+await pagina.getByLabel('Cantidad de AAPL').fill('10');
+await pagina.getByRole('button', { name: 'Revisar orden' }).click();
+await pagina.getByRole('button', { name: 'Confirmar compra' }).click();
+await pagina.getByText('Comprobante').waitFor();
+console.log('Registro + primera compra (s):', ((Date.now() - t0) / 1000).toFixed(1));
+await pagina.waitForTimeout(800);
+await foto('04-detalle-instrumento');
+await pagina.goto(`${url}/instrumentos/BTC`);
+await pagina.getByLabel('Cantidad de BTC').fill('0,05');
+await pagina.getByRole('button', { name: 'Revisar orden' }).click();
+await pagina.getByRole('button', { name: 'Confirmar compra' }).click();
+await pagina.getByText('Comprobante').waitFor();
+await pagina.getByRole('link', { name: 'Ver portafolio' }).click();
+await pagina.getByRole('heading', { name: 'Posiciones' }).waitFor();
+await pagina.waitForTimeout(800);
+await foto('05-portafolio');
+await pagina.goto(`${url}/ahorro`);
+await pagina.getByText('Valor final proyectado').waitFor();
+await pagina.getByRole('button', { name: /Depositar/ }).click();
+await pagina.getByText(/Depositaste/).waitFor();
+await foto('06-ahorro');
+await pagina.goto(`${url}/escenarios`);
+await pagina.getByRole('heading', { name: 'Actual frente a escenario' }).waitFor();
+await pagina.waitForTimeout(500);
+await foto('07-escenarios');
+await pagina.goto(`${url}/aprende`);
+await pagina
+  .getByRole('link', { name: /Interés compuesto/ })
+  .first()
+  .click();
+await pagina.getByText('Para recordar').waitFor();
+await foto('08-articulo');
+await pagina.goto(`${url}/perfil`);
+await pagina.getByText('Bancarrotas simuladas').waitFor();
+await foto('09-perfil');
+// Vista móvil de 360 px (RNF-12).
+await pagina.setViewportSize({ width: 360, height: 800 });
+await pagina.goto(`${url}/panel`);
+await pagina.getByText('Patrimonio total').waitFor();
+await foto('10-panel-360');
+const desborde = await pagina.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+console.log('Desborde horizontal a 360 px:', desborde);
+console.log('Errores de consola:', errores.length ? errores : 'ninguno');
+await navegador.close();

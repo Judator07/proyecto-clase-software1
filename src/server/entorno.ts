@@ -1,2 +1,7 @@
-/** Tipo del contexto de Hono: bindings declarados en wrangler.jsonc (ver worker-configuration.d.ts). */
-export type Entorno = { Bindings: Env };
+import type { UsuarioDto } from '../compartido/tipos';
+
+/** Tipo del contexto de Hono: bindings de wrangler.jsonc (worker-configuration.d.ts) y el usuario de la sesión. */
+export type Entorno = {
+  Bindings: Env;
+  Variables: { usuario: UsuarioDto };
+};

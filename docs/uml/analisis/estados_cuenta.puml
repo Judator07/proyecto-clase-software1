@@ -1,0 +1,19 @@
+@startuml estados_cuenta
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Diagrama de estados — cuenta del Inversionista (RF-05, RN-09)
+
+[*] --> Activa : registrarse()\n/ saldoEfectivo = USD 10.000\n/ contadorBancarrotas = 0
+state Activa : do / recalcular patrimonio\ntras cada transacción y cada\nactualización de precios
+state "En bancarrota" as Bancarrota : entry / notificar al usuario\nentry / ofrecer el reinicio de cuenta (RF-05)
+Activa --> Bancarrota : when (patrimonioTotal() < USD 100)\n(RN-09)
+Bancarrota --> Activa : reiniciarCuenta()\n/ saldoEfectivo = USD 10.000\n/ contadorBancarrotas + 1\n/ conservar el historial
+
+note right of Bancarrota
+  SRS v1.1 (hallazgo 2): mientras la cuenta está
+  en bancarrota no se aceptan compras ni depósitos;
+  el usuario sí puede vender y consultar su historial
+  y el contenido educativo.
+end note
+@enduml

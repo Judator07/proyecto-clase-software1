@@ -1,0 +1,146 @@
+@startuml clases
+' Diagrama de clases de análisis (Taller UML v1.0 corregido según SRS v1.1)
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+hide empty members
+title Diagrama de clases de análisis
+
+abstract class Usuario {
+  -idUsuario : Entero
+  -nombre : Texto
+  -correo : Texto
+  -contraseñaHash : Texto
+  -fechaRegistro : Fecha
+  +iniciarSesión() : Booleano
+  +actualizarPerfil()
+}
+class Inversionista {
+  -saldoEfectivo : Decimal
+  -contadorBancarrotas : Entero
+  +patrimonioTotal() : Decimal
+  +estáEnBancarrota() : Booleano
+  +reiniciarCuenta()
+}
+class Administrador {
+  +gestionarCatálogo()
+  +gestionarContenido()
+}
+class ContenidoEducativo {
+  -idContenido : Entero
+  -título : Texto
+  -tema : Texto
+  -cuerpo : Texto
+  -estado : {Borrador, Publicado}
+  +publicar()
+}
+class Portafolio {
+  -idPortafolio : Entero
+  -nombre : Texto
+  -fechaCreación : Fecha
+  +valorTotal() : Decimal
+  +rendimiento() : Decimal
+  +composición() : Lista
+}
+class Posición {
+  -cantidad : Decimal
+  -costoPromedioPonderado : Decimal
+  +valorActual() : Decimal
+  +gananciaNoRealizada() : Decimal
+}
+class DepósitoAhorro <<nuevo v1.1>> {
+  -monto : Decimal
+  -tasaNominalAnual : Decimal
+  -capitalización : {Mensual, Trimestral, Anual}
+  -plazoMeses : Entero
+  -fechaInicio : Fecha
+  +valorALaFecha() : Decimal
+}
+class Transacción {
+  -idTransacción : Entero
+  -tipo : {Compra, Venta, Depósito, Retiro}
+  -cantidad : Decimal
+  -precioUnitario : Decimal
+  -montoTotal : Decimal
+  -fechaHora : FechaHora
+  -estado : {Pendiente, Ejecutada, Rechazada, Cancelada}
+  +registrar()
+  +ejecutar()
+  +rechazar(motivo : Texto)
+  +cancelar()
+}
+abstract class InstrumentoFinanciero {
+  -símbolo : Texto
+  -nombre : Texto
+  -precioActual : Decimal
+  -fechaActualización : FechaHora
+  +actualizarPrecio()
+  +esFraccionable() : Booleano
+}
+class Acción {
+  -sector : Texto
+  -bolsa : Texto
+}
+class ETF {
+  -índiceSubyacente : Texto
+}
+class Criptomoneda {
+  -decimalesMáximos : Entero = 8
+}
+class CuentaDeAhorro
+class CotizaciónHistórica {
+  -fecha : Fecha
+  -precioCierre : Decimal
+}
+class Escenario {
+  -idEscenario : Entero
+  -nombre : Texto
+  -descripción : Texto
+  +proyectar(p : Portafolio) : Decimal
+}
+class FactorImpacto {
+  -tipoInstrumento : Texto
+  -variaciónPorcentual : Decimal
+}
+class ProveedorDeDatosMercado <<externo>> {
+  -nombre : Texto
+  +obtenerPrecio(símbolo : Texto) : Decimal
+  +obtenerHistórico(símbolo : Texto) : Lista
+}
+
+Usuario <|-- Inversionista
+Usuario <|-- Administrador
+Administrador "1" -- "0..*" ContenidoEducativo : publica >
+Administrador "1" -- "0..*" InstrumentoFinanciero : administra >
+Inversionista "1" *-- "0..10" Portafolio : posee >
+Inversionista "1" o-- "0..*" Transacción : historial >
+Portafolio "1" *-- "0..*" Posición : mantiene >
+Portafolio "1" *-- "0..*" DepósitoAhorro : mantiene >
+Transacción "0..*" -- "0..1" Portafolio : ejecutada en >
+Transacción "0..*" -- "1" InstrumentoFinanciero : opera sobre >
+Posición "0..*" -- "1" InstrumentoFinanciero : corresponde a >
+DepósitoAhorro "0..*" -- "1" CuentaDeAhorro : de tipo >
+InstrumentoFinanciero <|-- Acción
+InstrumentoFinanciero <|-- ETF
+InstrumentoFinanciero <|-- Criptomoneda
+InstrumentoFinanciero <|-- CuentaDeAhorro
+InstrumentoFinanciero "1" *-- "0..*" CotizaciónHistórica : registra >
+Escenario "1" *-- "1..*" FactorImpacto : define >
+Escenario ..> Portafolio : <<use>> (solo proyecta)
+InstrumentoFinanciero ..> ProveedorDeDatosMercado : <<use>>
+
+note right of Inversionista
+  RN-09: si patrimonioTotal() < USD 100
+  la cuenta entra en bancarrota;
+  reiniciarCuenta() repone USD 10.000,
+  incrementa contadorBancarrotas
+  y conserva el historial.
+end note
+note bottom of DepósitoAhorro
+  v1.1 (hallazgo 4): el depósito guarda los
+  parámetros elegidos por el usuario (RF-10).
+  valorALaFecha() = P·(1 + r/n)^(n·t),
+  con t transcurrido y tope en el plazo.
+end note
+@enduml
