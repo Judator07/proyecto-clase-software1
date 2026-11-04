@@ -1,0 +1,57 @@
+@startuml casos_uso
+' Diagrama de casos de uso (Taller UML v1.0 corregido según SRS v1.1)
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Diagrama de casos de uso
+
+actor Visitante
+actor "Usuario registrado" as Usuario
+actor Administrador
+actor "Proveedor de datos\nde mercado" as Proveedor
+
+rectangle "Plataforma de Simulación de Inversión" {
+  usecase "Consultar contenido\neducativo (RF-19)" as UC_CONT
+  usecase "Registrarse (RF-01)" as UC_REG
+  usecase "Iniciar y cerrar\nsesión (RF-02)" as UC_LOGIN
+  usecase "Gestionar perfil\n(RF-03, RF-04)" as UC_PERFIL
+  usecase "Reiniciar cuenta\npor bancarrota (RF-05)" as UC_BANC
+  usecase "Consultar catálogo de\ninstrumentos (RF-06)" as UC_CAT
+  usecase "Ver precios actuales\ne históricos (RF-07)" as UC_PRECIOS
+  usecase "Comprar instrumento\n(RF-08)" as UC_COMPRA
+  usecase "Vender instrumento o\nretirar ahorro (RF-09)" as UC_VENTA
+  usecase "Simular cuenta de\nahorro (RF-10)" as UC_AHORRO
+  usecase "Consultar historial de\ntransacciones (RF-11)" as UC_HIST
+  usecase "Crear portafolio\n(RF-12)" as UC_CREAR
+  usecase "Renombrar o eliminar\nportafolio (RF-13)" as UC_GESTP
+  usecase "Ver rendimiento, gráficos\ny estadísticas (RF-14..16)" as UC_REND
+  usecase "Simular escenario de\nmercado (RF-21, RF-22)" as UC_ESC
+  usecase "Gestionar catálogo de\ninstrumentos (RF-18)" as UC_GCAT
+  usecase "Gestionar contenido\neducativo (RF-20)" as UC_GCONT
+  usecase "Actualizar precios\nde mercado (RF-17)" as UC_ACT
+}
+
+Visitante --> UC_CONT
+Visitante --> UC_REG
+Visitante --> UC_LOGIN
+Usuario --> UC_CONT
+Usuario --> UC_LOGIN
+Usuario --> UC_PERFIL
+Usuario --> UC_BANC
+Usuario --> UC_CAT
+Usuario --> UC_PRECIOS
+Usuario --> UC_COMPRA
+Usuario --> UC_VENTA
+Usuario --> UC_AHORRO
+Usuario --> UC_HIST
+Usuario --> UC_CREAR
+Usuario --> UC_GESTP
+Usuario --> UC_REND
+Usuario --> UC_ESC
+Administrador --> UC_GCAT
+Administrador --> UC_GCONT
+Administrador --> UC_LOGIN
+UC_ACT --> Proveedor
+UC_PRECIOS --> Proveedor
+@enduml

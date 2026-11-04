@@ -1,0 +1,25 @@
+@startuml estados_transaccion
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Diagrama de estados — objeto Transacción (RF-08, RF-09)
+
+[*] --> Pendiente : registrar()\n(el usuario envía la orden)
+state Pendiente : do / validar saldo, posición\ny disponibilidad de precio
+state Ejecutada : entry / actualizar saldo efectivo\nentry / crear o actualizar la posición\nentry / recalcular el portafolio
+state Rechazada : entry / registrar el motivo del rechazo
+state Cancelada : entry / descartar la orden\n(no afecta saldo ni posiciones)
+
+Pendiente --> Ejecutada : ejecutar()\n[saldo o posición suficiente]
+Pendiente --> Rechazada : rechazar(motivo)\n[saldo o posición insuficiente\no precio no disponible]
+Pendiente --> Cancelada : cancelar()\n[el usuario desiste\nantes de confirmar]
+Ejecutada --> [*]
+Rechazada --> [*]
+Cancelada --> [*]
+
+note bottom of Cancelada
+  Ejecutada, Rechazada y Cancelada son finales.
+  Diseño: Pendiente corresponde al paso de confirmación
+  (resumen de la orden) y no se persiste.
+end note
+@enduml

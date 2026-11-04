@@ -7,7 +7,7 @@ Bitácora de avance. Sirve de punto de control para retomar el trabajo y de evid
 | Fase | Contenido                                                                                  | Estado       |
 | ---- | ------------------------------------------------------------------------------------------ | ------------ |
 | 0+1  | Repo profesional, esqueleto desplegable (Vite + React + Hono + D1), CI, D1 creada          | ✅ Hecho     |
-| 2    | Informe 01–03, dominio + pruebas unitarias, migraciones 0003–0004 (contenido e históricos) | ⏳ Pendiente |
+| 2    | Informe 01–03, dominio + pruebas unitarias, migraciones 0003–0004 (contenido e históricos) | ✅ Hecho     |
 | 3    | API completa RF-01..RF-22, cron RF-17, pruebas de integración, revisión crítica            | ⏳ Pendiente |
 | 4    | Frontend IU-01..IU-11                                                                      | ⏳ Pendiente |
 | 5    | Verificación en producción, cuenta de administrador                                        | ⏳ Pendiente |
@@ -33,3 +33,6 @@ Bitácora de avance. Sirve de punto de control para retomar el trabajo y de evid
   - Se creó la D1 `simulador-inversion-db`.
   - Esqueleto con `/api/salud` y sondas temporales del proveedor y de PBKDF2.
   - Migraciones 0001 (esquema) y 0002 (catálogo).
+- **2026-11-04 (fase 2)**: capa de dominio con 35 pruebas (100 % de líneas) y migraciones 0003 (8 artículos) y 0004 (25.419 cierres).
+  - Informe 01–03 y diagramas de análisis corregidos (PlantUML → SVG, motor `smetana`, sin Graphviz).
+  - **Siguiente:** fase 3, la API. Pruebas de integración con `@cloudflare/vitest-plugin` v1: `cloudflareTest()` y `readD1Migrations`; `applyD1Migrations` viene de `cloudflare:test`, y `env` y `exports` de `cloudflare:workers`.

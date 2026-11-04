@@ -1,0 +1,37 @@
+@startuml actividades_compra
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Diagrama de actividades — Ejecutar una orden de compra (RF-06..RF-08)
+
+start
+:Seleccionar instrumento del catálogo;
+:Consultar último precio registrado;
+:Mostrar precio actual y saldo disponible;
+repeat
+  :Ingresar cantidad y portafolio destino;
+  :Validar cantidad\n(decimales permitidos, RN-02);
+backward:Mostrar mensaje de error;
+repeat while (¿Cantidad válida?) is (No) not (Sí)
+:Calcular monto total\n(cantidad × último precio, sin comisiones, RN-03);
+:Mostrar resumen de la orden (estado **Pendiente**);
+if (¿El usuario confirma la orden?) then (Sí)
+  if (¿Saldo efectivo suficiente?) then (Sí)
+    fork
+      :Debitar el monto total del saldo efectivo;
+    fork again
+      :Crear o actualizar la posición\ncon costo promedio ponderado (RN-06);
+    end fork
+    :Cambiar el estado de la transacción a **Ejecutada**;
+    :Recalcular el valor total del portafolio;
+    :Mostrar comprobante y portafolio actualizado;
+    stop
+  else (No)
+    :Cambiar el estado de la transacción a **Rechazada**;
+    :Mostrar el motivo del rechazo;
+    stop
+  endif
+else (No)
+  :Cambiar el estado de la transacción a **Cancelada**;
+  stop
+endif
+@enduml
