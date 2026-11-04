@@ -1,0 +1,31 @@
+@startuml despliegue
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Diagrama de despliegue
+
+node "Dispositivo del usuario" as Cliente {
+  artifact "Navegador web\n(Chrome, Firefox, Edge)" as Nav
+}
+cloud "Red global de Cloudflare" as CF {
+  node "Worker «simulador-inversion»" as W {
+    artifact "SPA React\n(Static Assets)" as SPA
+    artifact "API REST Hono\n/api/*" as API
+    artifact "Tarea programada\nCron */15 min (RF-17)" as Cron
+  }
+  database "Cloudflare D1\n«simulador-inversion-db»\n(SQLite)" as D1
+}
+cloud "Yahoo Finance\n(API de gráficos v8)" as Yahoo
+node "GitHub" as GH {
+  artifact "Repositorio + Actions (CI)" as Repo
+}
+node "Workers Builds (CD)" as WB
+
+Nav --> SPA : HTTPS
+Nav --> API : HTTPS / JSON\ncookie de sesión
+API --> D1 : SQL (binding DB)
+Cron --> D1 : precios y valoraciones
+Cron --> Yahoo : HTTPS / JSON
+Repo --> WB : push a main
+WB --> W : migraciones D1 +\nwrangler deploy
+@enduml

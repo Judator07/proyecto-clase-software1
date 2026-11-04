@@ -1,0 +1,37 @@
+@startuml secuencia_compra
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Secuencia de diseño — Comprar instrumento (RF-08)
+
+actor Usuario
+participant "FormularioOrden\n(IU-06)" as UI
+participant "rutasOrdenes\n(Hono + Zod)" as R
+participant "operaciones\n(servicio)" as S
+participant "reglas\n(dominio)" as D
+database "D1" as BD
+
+Usuario -> UI : ingresa portafolio y cantidad
+UI -> D : validarCantidad(tipo, cantidad) (RN-02)
+UI -> R : POST /api/ordenes/cotizacion
+R -> S : cotizarOrden(usuario, orden)
+S -> BD : portafolio del usuario, instrumento,\nposición y saldo (lecturas)
+S --> UI : resumen (precio, total, saldo después)
+note right of UI : Estado «Pendiente» del análisis:\nla orden solo existe en el resumen.
+alt el usuario confirma
+  UI -> R : POST /api/ordenes {…, precioCotizado}
+  R -> S : ejecutarOrden(usuario, orden)
+  S -> S : ¿precio cambió? → 409, nuevo resumen (RN-03)
+  S -> S : ¿bancarrota? ¿saldo < monto? → Rechazada
+  S -> BD : batch atómico: [portafolio activo,\nsaldo −= monto (CHECK ≥ 0),\nupsert posición con costo promedio (RN-06),\nINSERT transacción EJECUTADA]
+  alt el batch viola un CHECK (compra concurrente)
+    BD --> S : error de restricción (rollback total)
+    S -> BD : INSERT transacción RECHAZADA
+  end
+  S --> UI : comprobante + saldo
+else el usuario cancela
+  UI -> R : POST /api/ordenes/cancelacion
+  R -> S : cancelarOrden(…)
+  S -> BD : INSERT transacción CANCELADA
+  S --> UI : comprobante (sin cambios de saldo)
+end
+@enduml

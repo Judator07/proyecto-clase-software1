@@ -1,0 +1,36 @@
+@startuml componentes
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+title Arquitectura en capas (RNF-11)
+
+package "Presentación (cliente)" {
+  [Pantallas IU-01..IU-11\n(src/client/paginas)] as Paginas
+  [Componentes y gráficos\n(src/client/componentes)] as Comp
+  [Cliente HTTP y sesión\n(api.ts, sesion.tsx)] as ApiCli
+}
+package "Presentación (servidor)" {
+  [Rutas REST + validación Zod\n(src/server/rutas)] as Rutas
+  [Middleware de sesión y rol\n(sesion.ts)] as Sesion
+}
+package "Lógica de negocio" {
+  [Servicios\n(cuentas, operaciones,\nportafolios, mercado, contenido)] as Servicios
+  [Dominio compartido\n(reglas RN, interés compuesto,\nestadísticas, escenarios)] as Dominio
+}
+package "Datos" {
+  [Repositorios SQL\n(src/server/datos)] as Repos
+  [ProveedorDatosMercado\n(adaptador Yahoo)] as Prov
+  database "D1" as BD
+}
+
+Paginas --> Comp
+Paginas --> ApiCli
+Paginas ..> Dominio : cálculos puros\n(ahorro, escenarios)
+ApiCli --> Rutas : HTTPS/JSON
+Rutas --> Sesion
+Rutas --> Servicios
+Servicios --> Dominio
+Servicios --> Repos
+Servicios --> Prov
+Repos --> BD
+@enduml
