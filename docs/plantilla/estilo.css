@@ -127,3 +127,23 @@ a {
 header#title-block-header {
   display: none;
 }
+#TOC {
+  font-size: 9.5pt;
+}
+#TOC li {
+  margin: 0;
+  line-height: 1.32;
+}
+#TOC > ul > li {
+  margin-top: 3px;
+  font-weight: bold;
+}
+#TOC > ul > li > ul {
+  font-weight: normal;
+}
+h2,
+h3,
+h4 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
