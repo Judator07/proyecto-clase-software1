@@ -49,12 +49,12 @@ El detalle está en la sección de [diseño del informe](docs/informe/04-diseno.
 
 ## Calidad
 
-| Tipo de prueba                                                      | Cantidad | Herramienta                 |
-| ------------------------------------------------------------------- | -------- | --------------------------- |
-| Unitarias (dominio, con los criterios de aceptación del SRS)        | 36       | Vitest                      |
-| Integración (API + D1 en el runtime de Workers)                     | 43       | `@cloudflare/vitest-plugin` |
-| Extremo a extremo y accesibilidad WCAG 2.1 AA (escritorio y 360 px) | 10       | Playwright + axe            |
-| Carga (50 usuarios concurrentes, 10 min, en producción)             | 1        | `tests/carga/carga.mjs`     |
+| Tipo de prueba                                                         | Cantidad   | Herramienta                 |
+| ---------------------------------------------------------------------- | ---------- | --------------------------- |
+| Unitarias (dominio, con los criterios de aceptación del SRS)           | 36         | Vitest                      |
+| Integración (API + D1 en el runtime de Workers)                        | 43         | `@cloudflare/vitest-plugin` |
+| Extremo a extremo y accesibilidad WCAG 2.1 AA (escritorio y 360 px)    | 10         | Playwright + axe            |
+| Carga en producción: 50 usuarios, 10 min, 0 % de errores, p95 = 214 ms | 2 corridas | `tests/carga/carga.mjs`     |
 
 Los resultados completos y la matriz de trazabilidad están en [Validación](docs/informe/05-validacion.md).
 
