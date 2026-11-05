@@ -40,6 +40,7 @@ Se usó un proceso **ágil basado en Scrum**, como fija el SRS §2.5, con estos 
 | 3.7 Validación E2E        | `ff5a4d9`                                                             | Suite Playwright con axe: encontró y corrigió 2 fallas de accesibilidad y 1 desborde a 360 px.                                                                                                |
 | 3.8 Integración           | PR [#1](https://github.com/Judator07/proyecto-clase-software1/pull/1) | Integración a `main` y despliegue automático a producción.                                                                                                                                    |
 | 3.9 Informe y cierre      | commits posteriores                                                   | Diseño, validación, proceso, conclusiones, perspectivas, PDF y auditoría final.                                                                                                               |
+| 3.10 Revalidación         | PR [#2](https://github.com/Judator07/proyecto-clase-software1/pull/2) | Después del reinicio de la cuota de D1: cron verificado en producción y segunda prueba de carga con perfil realista, sin errores y con un p95 de 214 ms.                                      |
 
 ## 6.3 Roles y distribución del trabajo (propuesta)
 
