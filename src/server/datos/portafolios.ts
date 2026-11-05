@@ -199,3 +199,41 @@ export function stmtExigirPortafolioActivo(db: D1Database, portafolioId: number)
     .prepare("UPDATE portafolio SET nombre = CASE WHEN eliminado_en IS NULL THEN nombre ELSE '' END WHERE id = ?")
     .bind(portafolioId);
 }
+
+/** Sentencias de lectura para combinar en un solo DB.batch() (D1 atiende una consulta a la vez). */
+export function stmtPortafoliosDeUsuario(db: D1Database, usuarioId: number) {
+  return db
+    .prepare(
+      `SELECT id, usuario_id, nombre, descripcion, creado_en FROM portafolio WHERE usuario_id = ? AND ${ACTIVOS} ORDER BY creado_en, id`,
+    )
+    .bind(usuarioId);
+}
+
+export function stmtBuscarPortafolio(db: D1Database, id: number, usuarioId: number) {
+  return db
+    .prepare(
+      `SELECT id, usuario_id, nombre, descripcion, creado_en FROM portafolio WHERE id = ? AND usuario_id = ? AND ${ACTIVOS}`,
+    )
+    .bind(id, usuarioId);
+}
+
+export function stmtValoracionesDesde(db: D1Database, portafolioId: number, desde: string) {
+  return db
+    .prepare(
+      'SELECT fecha, valor_centavos AS valor FROM valoracion_portafolio WHERE portafolio_id = ? AND fecha >= ? ORDER BY fecha',
+    )
+    .bind(portafolioId, desde);
+}
+
+export function stmtPosicionPorSimbolo(db: D1Database, portafolioId: number, simbolo: string) {
+  return db
+    .prepare(
+      `SELECT cantidad_e8, costo_promedio FROM posicion
+        WHERE portafolio_id = ? AND instrumento_id = (SELECT id FROM instrumento WHERE simbolo = ?)`,
+    )
+    .bind(portafolioId, simbolo);
+}
+
+export function stmtSaldo(db: D1Database, usuarioId: number) {
+  return db.prepare('SELECT saldo_centavos FROM usuario WHERE id = ?').bind(usuarioId);
+}

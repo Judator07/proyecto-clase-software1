@@ -1,5 +1,5 @@
 /** Catálogo, precios, históricos, actualización automática (RF-06, RF-07, RF-16, RF-17) y administración (RF-18). */
-import type { HistoricoDto, InstrumentoDto, Rango } from '../../compartido/tipos';
+import type { HistoricoDto, InstrumentoDto, PuntoSerie, Rango } from '../../compartido/tipos';
 import { calcularEstadisticas } from '../../dominio/estadisticas';
 import { fechaISOColombia, formatearFecha } from '../../dominio/formato';
 import type { TipoInstrumento } from '../../dominio/reglas';
@@ -7,10 +7,11 @@ import {
   aInstrumentoDto,
   buscarInstrumentoPorId,
   buscarInstrumentoPorSimbolo,
-  historicoDesde,
   listarInstrumentos,
   stmtActualizarPrecio,
   stmtGuardarCierre,
+  stmtHistoricoPorSimbolo,
+  stmtInstrumentoPorSimbolo,
   stmtMarcarDesactualizado,
   type FilaInstrumento,
 } from '../datos/mercado';
@@ -47,11 +48,15 @@ export async function detalleInstrumento(db: D1Database, simbolo: string): Promi
 
 /** RF-07 / RF-16: serie de cierres del rango, aviso si el rango está incompleto y estadísticas. */
 export async function historicoInstrumento(db: D1Database, simbolo: string, rango: Rango): Promise<HistoricoDto> {
-  const instrumento = await buscarInstrumentoPorSimbolo(db, simbolo);
+  const desde = fechaDesde(rango, new Date());
+  const [ins, hist] = await db.batch<unknown>([
+    stmtInstrumentoPorSimbolo(db, simbolo),
+    stmtHistoricoPorSimbolo(db, simbolo, desde),
+  ]);
+  const instrumento = ins.results[0] as FilaInstrumento | undefined;
   if (!instrumento) throw noEncontrado('Instrumento');
   if (instrumento.tipo === 'AHORRO') throw new ErrorAplicacion(400, 'La cuenta de ahorro no tiene precios de mercado.');
-  const desde = fechaDesde(rango, new Date());
-  const puntos = await historicoDesde(db, instrumento.id, desde);
+  const puntos = hist.results as PuntoSerie[];
   let aviso: string | null = null;
   if (puntos.length === 0) aviso = 'No hay datos de precios para este rango.';
   else if (Date.parse(puntos[0].fecha) - Date.parse(desde) > 5 * 86_400_000) {
@@ -65,6 +70,16 @@ export function tocaActualizar(ahora: Date, intervaloMinutos: number): boolean {
   const ciclos = Math.max(1, Math.round(intervaloMinutos / 15));
   const minutoDelDia = ahora.getUTCHours() * 60 + ahora.getUTCMinutes();
   return Math.floor(minutoDelDia / 15) % ciclos === 0;
+}
+
+/** Primer ciclo del cron en el día UTC (00:00–00:14). */
+export function primerCicloDelDia(ahora: Date): boolean {
+  return ahora.getUTCHours() === 0 && ahora.getUTCMinutes() < 15;
+}
+
+/** Ciclo de las 21:00 UTC (16:00 en Nueva York y Bogotá), después del cierre de la bolsa. */
+export function esCicloDeValoracion(ahora: Date): boolean {
+  return ahora.getUTCHours() === 21 && ahora.getUTCMinutes() < 15;
 }
 
 async function ejecutarEnLotes(db: D1Database, sentencias: D1PreparedStatement[]): Promise<void> {
@@ -96,7 +111,9 @@ export async function actualizarPrecios(
     if (r.status === 'fulfilled') {
       const c = r.value;
       sentencias.push(stmtActualizarPrecio(db, instrumento.id, c.precio, c.cierreAnterior, c.fechaHora));
-      for (const cierre of c.cierres.slice(-CIERRES_POR_CICLO)) {
+      // Cada ciclo guarda solo el cierre del día; el primer ciclo del día (UTC) rellena huecos recientes.
+      const cierres = primerCicloDelDia(ahora) ? c.cierres.slice(-CIERRES_POR_CICLO) : c.cierres.slice(-1);
+      for (const cierre of cierres) {
         sentencias.push(stmtGuardarCierre(db, instrumento.id, cierre.fecha, cierre.precio));
       }
     } else {
@@ -107,9 +124,10 @@ export async function actualizarPrecios(
     }
   });
   // Purga de sesiones expiradas (RNF-06).
-  sentencias.push(db.prepare('DELETE FROM sesion WHERE expira_en < ?').bind(ahora.toISOString()));
+  sentencias.push(db.prepare('DELETE FROM sesion WHERE expira_en < ?').bind(new Date().toISOString()));
   await ejecutarEnLotes(db, sentencias);
-  await guardarValoracionesDiarias(db, ahora);
+  // RF-17: el valor de cada portafolio se almacena una vez al día, tras el cierre del mercado de EE. UU.
+  if (esCicloDeValoracion(ahora)) await guardarValoracionesDiarias(db, ahora);
   return { actualizados: instrumentos.length - fallidos.length, fallidos };
 }
 

@@ -1,0 +1,149 @@
+/* Estilo de impresión del informe (A4). */
+@page {
+  size: A4;
+  margin: 22mm 18mm 20mm 18mm;
+}
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 10.5pt;
+  line-height: 1.45;
+  color: #111;
+  max-width: none;
+  margin: 0;
+}
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  color: #064e3b;
+  line-height: 1.2;
+}
+h1 {
+  font-size: 20pt;
+  border-bottom: 2px solid #064e3b;
+  padding-bottom: 4px;
+  margin-top: 0;
+  page-break-before: always;
+}
+h2 {
+  font-size: 14pt;
+  margin-top: 1.4em;
+}
+h3 {
+  font-size: 12pt;
+}
+p,
+li {
+  text-align: justify;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  font-size: 8.8pt;
+  page-break-inside: auto;
+}
+th,
+td {
+  border: 1px solid #94a3b8;
+  padding: 3px 6px;
+  vertical-align: top;
+  text-align: left;
+}
+th {
+  background: #e2e8f0;
+}
+tr {
+  page-break-inside: avoid;
+}
+code {
+  font-family: 'Courier New', monospace;
+  font-size: 9pt;
+  background: #f1f5f9;
+  padding: 0 2px;
+}
+pre {
+  background: #f1f5f9;
+  padding: 8px;
+  font-size: 8.5pt;
+  white-space: pre-wrap;
+}
+img {
+  max-width: 100%;
+  max-height: 210mm;
+  display: block;
+  margin: 0.6em auto;
+  page-break-inside: avoid;
+}
+blockquote {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+  margin: 0.8em 0;
+  padding: 4px 10px;
+}
+a {
+  color: #065f46;
+  text-decoration: none;
+}
+#TOC {
+  page-break-after: always;
+}
+#TOC ul {
+  list-style: none;
+  padding-left: 1.2em;
+}
+#TOC > ul {
+  padding-left: 0;
+}
+#TOC a {
+  color: #111;
+}
+.portada {
+  height: 245mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+.portada .titulo {
+  font-size: 26pt;
+  font-weight: bold;
+  color: #064e3b;
+  margin-top: 50mm;
+}
+.portada .subtitulo {
+  font-size: 15pt;
+  margin-top: 6mm;
+}
+.portada .equipo {
+  font-size: 12pt;
+  line-height: 1.7;
+}
+.portada .pie {
+  font-size: 11pt;
+}
+header#title-block-header {
+  display: none;
+}
+#TOC {
+  font-size: 9.5pt;
+}
+#TOC li {
+  margin: 0;
+  line-height: 1.32;
+}
+#TOC > ul > li {
+  margin-top: 3px;
+  font-weight: bold;
+}
+#TOC > ul > li > ul {
+  font-weight: normal;
+}
+h2,
+h3,
+h4 {
+  break-after: avoid;
+  page-break-after: avoid;
+}

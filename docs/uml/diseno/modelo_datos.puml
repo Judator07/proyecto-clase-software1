@@ -1,0 +1,103 @@
+@startuml modelo_datos
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+hide circle
+skinparam linetype ortho
+title Modelo de datos (D1 / SQLite)
+
+entity usuario {
+  * id : INTEGER <<PK>>
+  --
+  nombre, correo <<UNIQUE>>
+  hash_contrasena, sal, iteraciones
+  rol : INVERSIONISTA | ADMINISTRADOR
+  saldo_centavos : CHECK >= 0
+  contador_bancarrotas, fecha_ultimo_reinicio
+  intentos_fallidos, bloqueado_hasta
+  acepto_politica_en
+}
+entity sesion {
+  * token_hash : TEXT <<PK>>
+  --
+  usuario_id <<FK>>
+  expira_en
+}
+entity portafolio {
+  * id <<PK>>
+  --
+  usuario_id <<FK>>
+  nombre : único por usuario activo
+  descripcion, creado_en
+  eliminado_en (borrado lógico)
+}
+entity posicion {
+  * portafolio_id <<PK,FK>>
+  * instrumento_id <<PK,FK>>
+  --
+  cantidad_e8 : CHECK >= 0
+  costo_promedio
+}
+entity deposito_ahorro {
+  * id <<PK>>
+  --
+  portafolio_id, instrumento_id <<FK>>
+  monto_centavos, tasa_anual_pct
+  periodos_por_anio, plazo_meses
+  fecha_inicio, estado
+}
+entity transaccion {
+  * id <<PK>>
+  --
+  usuario_id, portafolio_id <<FK>>
+  instrumento_id, deposito_id <<FK>>
+  tipo : COMPRA | VENTA | DEPOSITO | RETIRO
+  estado : EJECUTADA | RECHAZADA | CANCELADA
+  cantidad_e8, precio_unitario
+  monto_centavos, ganancia_realizada_centavos
+  motivo, creado_en
+}
+entity instrumento {
+  * id <<PK>>
+  --
+  simbolo <<UNIQUE>>, simbolo_proveedor
+  nombre, tipo : ACCION | ETF | CRIPTO | AHORRO
+  sector, bolsa, indice_subyacente
+  activo, precio_actual, precio_cierre_anterior
+  fecha_actualizacion, estado_precio
+}
+entity cotizacion_historica {
+  * instrumento_id <<PK,FK>>
+  * fecha <<PK>>
+  --
+  precio_cierre
+}
+entity valoracion_portafolio {
+  * portafolio_id <<PK,FK>>
+  * fecha <<PK>>
+  --
+  valor_centavos, capital_invertido_centavos
+}
+entity contenido_educativo {
+  * id <<PK>>
+  --
+  slug <<UNIQUE>>, titulo, tema
+  resumen, cuerpo (Markdown)
+  estado : BORRADOR | PUBLICADO
+  autor_id <<FK>>
+}
+
+usuario ||--o{ sesion
+usuario ||--o{ portafolio
+usuario ||--o{ transaccion
+usuario |o--o{ contenido_educativo
+portafolio ||--o{ posicion
+portafolio ||--o{ deposito_ahorro
+portafolio |o--o{ transaccion
+portafolio ||--o{ valoracion_portafolio
+instrumento ||--o{ posicion
+instrumento ||--o{ cotizacion_historica
+instrumento |o--o{ transaccion
+instrumento ||--o{ deposito_ahorro
+deposito_ahorro |o--o{ transaccion
+@enduml

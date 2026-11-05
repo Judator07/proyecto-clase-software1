@@ -63,9 +63,12 @@ export async function usuarioDeSesion(c: Context<Entorno>): Promise<UsuarioDto |
     return null;
   }
   if (Date.parse(fila.expira_en) - ahora < DURACION_SESION_MS - MARGEN_RENOVACION_MS) {
+    // La renovación es de mejor esfuerzo: si la escritura falla (p. ej. cuota diaria de D1 agotada),
+    // las consultas de solo lectura siguen funcionando.
     await c.env.DB.prepare('UPDATE sesion SET expira_en = ? WHERE token_hash = ?')
       .bind(new Date(ahora + DURACION_SESION_MS).toISOString(), hash)
-      .run();
+      .run()
+      .catch((e: unknown) => console.error('No se pudo renovar la sesión', String(e)));
   }
   return { id: fila.id, nombre: fila.nombre, correo: fila.correo, rol: fila.rol };
 }

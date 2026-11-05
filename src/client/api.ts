@@ -19,7 +19,7 @@ export function registrarAlExpirarSesion(fn: () => void) {
   alExpirarSesion = fn;
 }
 
-async function solicitar<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
+async function solicitar<T>(metodo: string, ruta: string, cuerpo?: unknown, reintento = true): Promise<T> {
   let respuesta: Response;
   try {
     respuesta = await fetch(`/api${ruta}`, {
@@ -30,6 +30,11 @@ async function solicitar<T>(metodo: string, ruta: string, cuerpo?: unknown): Pro
     });
   } catch {
     throw new ErrorCliente(0, 'No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.');
+  }
+  // Las consultas (GET) se reintentan una vez si el servidor está saturado (503).
+  if (respuesta.status === 503 && metodo === 'GET' && reintento) {
+    await new Promise((r) => setTimeout(r, 1000));
+    return solicitar<T>(metodo, ruta, cuerpo, false);
   }
   const datos = (await respuesta.json().catch(() => null)) as (T & ErrorApi) | null;
   if (!respuesta.ok) {

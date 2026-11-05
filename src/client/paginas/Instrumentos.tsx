@@ -80,7 +80,7 @@ export default function Instrumentos() {
       {datos && datos.length === 0 && <Vacio>No se encontraron instrumentos.</Vacio>}
       {datos && datos.length > 0 && (
         <div
-          className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm"
+          className="relative overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm"
           tabIndex={0}
           role="region"
           aria-label="Tabla con desplazamiento"

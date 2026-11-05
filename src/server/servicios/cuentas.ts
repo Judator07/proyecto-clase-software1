@@ -2,10 +2,17 @@
 import type { PerfilDto } from '../../compartido/tipos';
 import { SALDO_INICIAL_CENTAVOS } from '../../dominio/dinero';
 import { estaEnBancarrota, validarContrasena } from '../../dominio/reglas';
-import { listarPortafolios } from '../datos/portafolios';
+import {
+  stmtDepositosDeUsuario,
+  stmtPortafoliosDeUsuario,
+  stmtPosicionesDeUsuario,
+  type FilaDeposito,
+  type FilaPortafolio,
+  type FilaPosicion,
+} from '../datos/portafolios';
 import { ErrorAplicacion, esViolacionRestriccion } from '../errores';
 import { derivarHash, generarSal, verificarContrasena } from '../seguridad';
-import { resumenVacio, valorarPortafoliosDeUsuario, valorInvertidoTotal } from './valoracion';
+import { resumenVacio, valorarFilas, valorInvertidoTotal } from './valoracion';
 
 export const MAX_INTENTOS_FALLIDOS = 5;
 export const MINUTOS_BLOQUEO = 15;
@@ -127,11 +134,16 @@ export async function autenticar(
 
 /** RF-03: perfil con saldo, valor invertido, patrimonio, bancarrotas y resumen de portafolios. */
 export async function obtenerPerfil(db: D1Database, usuarioId: number): Promise<PerfilDto> {
-  const [usuario, portafolios, valoraciones] = await Promise.all([
-    buscarPorId(db, usuarioId),
-    listarPortafolios(db, usuarioId),
-    valorarPortafoliosDeUsuario(db, usuarioId),
+  // Una sola ida a D1 con las cuatro lecturas (RNF-01/RNF-02: D1 atiende una consulta a la vez).
+  const [u, pf, pos, dep] = await db.batch<unknown>([
+    db.prepare('SELECT * FROM usuario WHERE id = ?').bind(usuarioId),
+    stmtPortafoliosDeUsuario(db, usuarioId),
+    stmtPosicionesDeUsuario(db, usuarioId),
+    stmtDepositosDeUsuario(db, usuarioId),
   ]);
+  const usuario = u.results[0] as FilaUsuario | undefined;
+  const portafolios = pf.results as FilaPortafolio[];
+  const valoraciones = valorarFilas(pos.results as FilaPosicion[], dep.results as FilaDeposito[], new Date());
   if (!usuario) throw new ErrorAplicacion(401, 'Tu sesión ya no es válida. Inicia sesión de nuevo.');
   const invertido = valorInvertidoTotal(valoraciones);
   const patrimonio = usuario.saldo_centavos + invertido;

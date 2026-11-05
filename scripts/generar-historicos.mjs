@@ -12,9 +12,24 @@ import { writeFileSync } from 'node:fs';
 
 // Debe coincidir con los identificadores de migrations/0002_catalogo.sql.
 const CATALOGO = [
-  [1, 'AAPL'], [2, 'MSFT'], [3, 'GOOGL'], [4, 'AMZN'], [5, 'NVDA'], [6, 'TSLA'], [7, 'JPM'], [8, 'KO'],
-  [9, 'SPY'], [10, 'QQQ'], [11, 'VTI'], [12, 'EEM'], [13, 'GLD'],
-  [14, 'BTC-USD'], [15, 'ETH-USD'], [16, 'SOL-USD'], [17, 'XRP-USD'], [18, 'ADA-USD'],
+  [1, 'AAPL'],
+  [2, 'MSFT'],
+  [3, 'GOOGL'],
+  [4, 'AMZN'],
+  [5, 'NVDA'],
+  [6, 'TSLA'],
+  [7, 'JPM'],
+  [8, 'KO'],
+  [9, 'SPY'],
+  [10, 'QQQ'],
+  [11, 'VTI'],
+  [12, 'EEM'],
+  [13, 'GLD'],
+  [14, 'BTC-USD'],
+  [15, 'ETH-USD'],
+  [16, 'SOL-USD'],
+  [17, 'XRP-USD'],
+  [18, 'ADA-USD'],
 ];
 const FILAS_POR_INSERT = 400; // mantiene cada sentencia muy por debajo del límite de 100 KB de D1
 
@@ -58,7 +73,9 @@ for (const [id, simbolo] of CATALOGO) {
       `fecha_actualizacion = '${fecha}', estado_precio = 'DESACTUALIZADO' WHERE id = ${id};`,
   );
   total += filas.length;
-  console.log(`${simbolo.padEnd(8)} ${String(filas.length).padStart(5)} cierres  ${filas[0][0]} → ${filas.at(-1)[0]}  precio ${precio}`);
+  console.log(
+    `${simbolo.padEnd(8)} ${String(filas.length).padStart(5)} cierres  ${filas[0][0]} → ${filas.at(-1)[0]}  precio ${precio}`,
+  );
 }
 writeFileSync(new URL('../migrations/0004_historicos.sql', import.meta.url), lineas.join('\n') + '\n');
 console.log(`Total: ${total} filas`);

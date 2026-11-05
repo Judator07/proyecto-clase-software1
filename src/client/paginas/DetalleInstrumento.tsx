@@ -96,7 +96,7 @@ export default function DetalleInstrumento() {
           {h && h.puntos.length > 0 && (
             <Tarjeta titulo="Tabla de precios históricos">
               <div
-                className="max-h-80 overflow-y-auto"
+                className="relative max-h-80 overflow-y-auto"
                 tabIndex={0}
                 role="region"
                 aria-label="Tabla con desplazamiento"
